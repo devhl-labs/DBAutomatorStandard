@@ -1,0 +1,207 @@
+{
+  "format": 1,
+  "restore": {
+    "E:\\repos\\DBAutomatorStandard\\TestConsole\\TestConsole.csproj": {}
+  },
+  "projects": {
+    "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
+        "projectName": "DBAutomatorStandard",
+        "projectPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
+        "packagesPath": "C:\\Users\\devhl\\.nuget\\packages\\",
+        "outputPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\devhl\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json": {},
+          "https://www.myget.org/F/discord-net/api/v3/index.json": {},
+          "https://www.myget.org/F/qmmands/api/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.1": {
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "dependencies": {
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.0.4, )"
+            },
+            "Microsoft.Extensions.Logging.Abstractions": {
+              "target": "Package",
+              "version": "[3.0.0, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[4.1.0-preview2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.0.100\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\repos\\DBAutomatorStandard\\TestConsole\\TestConsole.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\repos\\DBAutomatorStandard\\TestConsole\\TestConsole.csproj",
+        "projectName": "TestConsole",
+        "projectPath": "E:\\repos\\DBAutomatorStandard\\TestConsole\\TestConsole.csproj",
+        "packagesPath": "C:\\Users\\devhl\\.nuget\\packages\\",
+        "outputPath": "E:\\repos\\DBAutomatorStandard\\TestConsole\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\devhl\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netcoreapp3.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json": {},
+          "https://www.myget.org/F/discord-net/api/v3/index.json": {},
+          "https://www.myget.org/F/qmmands/api/v3/index.json": {}
+        },
+        "frameworks": {
+          "netcoreapp3.0": {
+            "projectReferences": {
+              "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj": {
+                "projectPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj"
+              },
+              "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\TestDatabaseLibrary.csproj": {
+                "projectPath": "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\TestDatabaseLibrary.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netcoreapp3.0": {
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.0.100\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\TestDatabaseLibrary.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\TestDatabaseLibrary.csproj",
+        "projectName": "TestDatabaseLibrary",
+        "projectPath": "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\TestDatabaseLibrary.csproj",
+        "packagesPath": "C:\\Users\\devhl\\.nuget\\packages\\",
+        "outputPath": "E:\\repos\\DBAutomatorStandard\\TestDatabaseLibrary\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\devhl\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.1"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json": {},
+          "https://www.myget.org/F/discord-net/api/v3/index.json": {},
+          "https://www.myget.org/F/qmmands/api/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.1": {
+            "projectReferences": {
+              "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj": {
+                "projectPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\3.0.100\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

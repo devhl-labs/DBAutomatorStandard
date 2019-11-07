@@ -1,0 +1,11 @@
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\bin\Debug\netstandard2.0\TestDatabaseLibrary.deps.json
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\bin\Debug\netstandard2.0\TestDatabaseLibrary.dll
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\bin\Debug\netstandard2.0\TestDatabaseLibrary.pdb
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\bin\Debug\netstandard2.0\DBAutomatorStandard.dll
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\bin\Debug\netstandard2.0\DBAutomatorStandard.pdb
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.csprojAssemblyReference.cache
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.AssemblyInfoInputs.cache
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.AssemblyInfo.cs
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.csproj.CopyComplete
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.dll
+E:\repos\DBAutomatorStandard\TestDatabaseLibrary\obj\Debug\netstandard2.0\TestDatabaseLibrary.pdb
