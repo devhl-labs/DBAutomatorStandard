@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Text;
 
-namespace DBAutomatorLibrary
-{
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-    public class NotMappedAttribute : Attribute
-    {
+//namespace DBAutomatorStandard
+//{
+//    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+//    public class NotMappedAttribute : Attribute
+//    {
 
-        public NotMappedAttribute()
-        {
+//        public NotMappedAttribute()
+//        {
 
-        }
+//        }
 
 
-    }
-}
+//    }
+//}

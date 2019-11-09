@@ -1,23 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Reflection;
-using DBAutomatorLibrary;
 using System.Linq;
+using Dapper;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace DBAutomatorStandard
 {
     public class RegisteredProperty
     {
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public PropertyInfo Property { get; set; }
+
+        public Type PropertyType { get; set; }
+
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
+
+
 
         public string ColumnName { get; set; } = string.Empty;
 
-        public string PropertyName { get; set; }
+        public string PropertyName { get; set; } = string.Empty;
 
         public bool IsKey { get; set; }
 
-        public Type PropertyType { get; set; }
+
     }
 
 
@@ -34,6 +42,8 @@ namespace DBAutomatorStandard
             SomeClass = someClass;
 
             TableName = GetTableName(someClass);
+
+            Dictionary<string, string> columnMaps = new Dictionary<string, string>();
 
             foreach (PropertyInfo property in someClass.GetType().GetProperties())
             {
@@ -53,13 +63,39 @@ namespace DBAutomatorStandard
                     };
 
                     RegisteredProperties.Add(registeredProperty);
+
+                    if (registeredProperty.PropertyName != registeredProperty.ColumnName)
+                    {
+                        columnMaps.Add(registeredProperty.ColumnName, registeredProperty.PropertyName);
+                    }
                 }
             }
+
+            var mapper = new Func<Type, string, PropertyInfo>((type, columnName) =>
+            {
+                if (columnMaps.ContainsKey(columnName))
+                {
+                    return type.GetProperty(columnMaps[columnName]);
+                }
+                else
+                {
+                    return type.GetProperty(columnName);
+                }
+            });
+
+            var map = new CustomPropertyTypeMap(
+                someClass.GetType(),
+                (type, columnName) => mapper(type, columnName)
+            );
+
+            SqlMapper.SetTypeMap(someClass.GetType(), map);
+
+
         }
 
         private bool IsKey(PropertyInfo property)
         {
-            if (Attribute.IsDefined(property, typeof(IdentityAttribute)))
+            if (Attribute.IsDefined(property, typeof(KeyAttribute)))
             {
                 return true;
             }
@@ -71,25 +107,23 @@ namespace DBAutomatorStandard
         {
             string result = someClass.GetType().Name;
 
-            if (someClass.GetType().GetCustomAttributes<TableNameAttribute>(true).FirstOrDefault() is TableNameAttribute tableNameAttribute)
+            if (someClass.GetType().GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
             {
-                result = tableNameAttribute.TableName;
+                result = tableNameAttribute.Name;
             }
 
-            return $"\"{result}\"";
-            //return result;
+            return $"{result}";
         }
 
         public string GetColumnName(PropertyInfo property)
         {
             string result = property.Name;
 
-            if (property.GetCustomAttributes<ColumnNameAttribute>(true).FirstOrDefault() is ColumnNameAttribute columnNameAttribute)
+            if (property.GetCustomAttributes<ColumnAttribute>(true).FirstOrDefault() is ColumnAttribute columnNameAttribute)
             {
-                result = columnNameAttribute.ColumnName;
+                result = columnNameAttribute.Name;
             }
 
-            //return $"\"{result}\"";
             return result;
         }
     }

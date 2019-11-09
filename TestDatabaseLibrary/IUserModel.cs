@@ -1,4 +1,5 @@
-﻿using DBAutomatorLibrary;
+﻿using DBAutomatorStandard;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TestDatabaseLibrary
 {
@@ -7,7 +8,7 @@ namespace TestDatabaseLibrary
     {
         ulong UserID { get; set; }
 
-        [ColumnName("UserNames")]
+        [Column("UserNames")]
         string UserName { get; set; }
 
         NotMappedClass NotMappedClass { get; set; }

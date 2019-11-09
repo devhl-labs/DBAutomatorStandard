@@ -3,14 +3,10 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace DBAutomatorLibrary
+namespace DBAutomatorStandard
 {
-    internal interface ISelectQuery<I, C> where C : I
+    internal interface ISelectQuery<C>
     {
-        Expression<Func<C, object>>? Collection { get; }
-        List<ConditionModel>? ConditionModels { get; }
-
-        Task<List<I>> GetListAsync();
-        Task<I> GetAsync();
+        Task<IEnumerable<C>> GetAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null);
     }
 }

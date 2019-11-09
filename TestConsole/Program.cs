@@ -1,10 +1,10 @@
-﻿using DBAutomatorLibrary;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Linq;
 using TestDatabaseLibrary;
-using System.Collections.Generic;
 using static DBAutomatorStandard.Enums;
+using System.IO;
+using DBAutomatorStandard;
 
 namespace TestConsole
 {
@@ -14,7 +14,16 @@ namespace TestConsole
         {
             LogService logService = new LogService();
 
-            DBAutomator postgres = new DBAutomator(DataStore.PostgreSQL, "Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password=*;", logger: logService);
+            string password = File.ReadAllText(@"E:\Desktop\password.txt");
+
+            QueryOptions queryOptions = new QueryOptions
+            {
+                DataStore = DataStore.PostgreSQL,          
+            };
+
+            queryOptions.ConnectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
+
+            DBAutomator postgres = new DBAutomator(queryOptions, logService);
 
             postgres.Register(new UserModel
             {
@@ -27,66 +36,35 @@ namespace TestConsole
 
             IUserModel newUser = new UserModel
             {
-                UserID = 11,
-                UserName = "another guy"
+                UserID = 13,
+                UserName = "abc"
             };
 
 
-            await postgres.InsertAsync<IUserModel, UserModel>(newUser);
-
-            //var user = await postgres.GetListAsync<IUserModel, UserModel>(a => a.UserName == "another guy");
-
-            //var all = await postgres.GetListAsync<IUserModel, UserModel>();
-
-            //IOrderModel orderModel = new OrderModel
-            //{
-            //    CustomerID = 1
-            //};
-
-            //await postgres.InsertAsync<IOrderModel, OrderModel>(orderModel);
-
-            //List<IOrderModel> deleted = await postgres.DeleteAsync<IOrderModel, OrderModel>();
-
-            //List<IUserModel> updated = await postgres.UpdateAsync<IUserModel, UserModel>(u => u.UserName == "b", u => u.UserID > 6);
-
-            var user = await postgres.GetAsync<IUserModel, UserModel>(u => u.UserID == 1);
-
-            user.UserName = "b";
-
-            await postgres.UpdateAsync<IUserModel, UserModel>(u => u.UserName == "b", u => u.UserID == 1);
+            //await postgres.InsertAsync<IUserModel, UserModel>(newUser);
 
 
-            //IOrderModel orderModel = new OrderModel
-            //{
-            //    CustomerID = 1
-            //};
 
-            //await postgres.InsertAsync<IOrderModel, OrderModel>(orderModel);
+            OrderByClause<UserModel> orderBy = new OrderByClause<UserModel>(postgres);
 
-            //await postgres.InsertAsync<IOrderModel, OrderModel>(orderModel);
+            orderBy.Asc(nameof(UserModel.UserID));
+            orderBy.Asc(nameof(UserModel.UserName));
+            
 
-            //IOrderModel orderModel = await postgres.GetAsync<IOrderModel, OrderModel>(o => o.OrderID == 44);
+            var a = await postgres.GetAsync(u => u.UserID > 2, orderBy);
+            var b = await postgres.GetAsync<UserModel>(u => u.UserID < 2);
+            var c = await postgres.GetAsync<UserModel>(u => u.UserID >= 2);
+            var d = await postgres.GetAsync<UserModel>(u => u.UserID <= 2);
+            var e = await postgres.GetAsync<UserModel>(u => u.UserID == 13);
 
-            ////await postgres.InsertAsync<IOrderModel, OrderModel>(orderModel);
+            var f = await postgres.DeleteAsync(newUser as UserModel);
 
-            ////await postgres.InsertAsync<IOrderModel, OrderModel>(orderModel);
-
-            ////orderModel.CustomerID = 2;
-
-            ////await postgres.UpdateAsync<IOrderModel, OrderModel>(orderModel);
-
-            //await postgres.DeleteAsync<IOrderModel, OrderModel>(orderModel);
+            var g = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changed", u => u.UserID == 13);
+            var h = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changedagain");
+            e.First().UserName = "xyz";
+            var i = await postgres.UpdateAsync(e.First());
 
 
-            //IUserModel userModel = new UserModel
-            //{
-            //    UserID = 2,
-            //    UserName = "test"
-            //};
-
-            //await postgres.InsertAsync<IUserModel, UserModel>(userModel);
-
-            //var a = await postgres.GetAsync<IUserModel, UserModel>(u => u.UserID == 2);
 
             await Task.Delay(-1);
         }

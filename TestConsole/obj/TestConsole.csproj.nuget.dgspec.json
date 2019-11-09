@@ -48,6 +48,10 @@
               "target": "Package",
               "version": "[2.0.4, )"
             },
+            "EntityFramework": {
+              "target": "Package",
+              "version": "[6.3.0, )"
+            },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
               "version": "[3.0.0, )"
@@ -184,6 +188,12 @@
       },
       "frameworks": {
         "netstandard2.1": {
+          "dependencies": {
+            "EntityFramework": {
+              "target": "Package",
+              "version": "[6.3.0, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

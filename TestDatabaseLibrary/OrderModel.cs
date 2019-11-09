@@ -1,9 +1,4 @@
-﻿using DBAutomatorLibrary;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TestDatabaseLibrary
+﻿namespace TestDatabaseLibrary
 {
     public class OrderModel : IOrderModel
     {

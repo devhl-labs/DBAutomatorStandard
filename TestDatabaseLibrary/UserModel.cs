@@ -1,21 +1,21 @@
-﻿using System;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Threading.Tasks;
-using DBAutomatorLibrary;
+using DBAutomatorStandard;
 using Microsoft.Extensions.Logging;
-using static DBAutomatorStandard.Enums;
 
 namespace TestDatabaseLibrary
 {
-    [TableName("User")]
+    [Table("User")]
     public class UserModel : IUserModel
     {
         private const string _source = nameof(UserModel);
 
         //[ColumnName("mycolumn")]
-        [Identity]
+        [Key]
         public ulong UserID { get; set; }
 
-        [ColumnName("UserNames")]
+        [Column("UserNames")]
         public string UserName { get; set; }
 
         public NotMappedClass NotMappedClass { get; set; }

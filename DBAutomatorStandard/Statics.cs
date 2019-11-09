@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace DBAutomatorLibrary
+namespace DBAutomatorStandard
 {
     internal static class Statics
     {
+        public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T>? source) => source ?? Enumerable.Empty<T>();
+
         public static string Left(this string param, int length)
         {
             string result = param.Substring(0, length);
@@ -22,103 +21,111 @@ namespace DBAutomatorLibrary
             return result;
         }
 
-
-
-
-        public static List<ConditionModel> GetConditions<T>(this Expression<Func<T, object>>? e)
+        public static string GetWhereClause<C>(this Expression<Func<C, object>>? e, RegisteredClass registeredClass)
         {
-            var conditions = new List<ConditionModel>();
-
             if (e == null)
             {
-                return conditions;
+                return string.Empty;
             }
 
-            if (((UnaryExpression)e.Body).Operand is BinaryExpression binaryExpression)
+            if (e.Body is UnaryExpression unaryExpression && unaryExpression.Operand is BinaryExpression binaryExpression)
             {
-                CheckConditions(conditions, binaryExpression);
-            }
 
-            return conditions.OrderBy(c => c.Name).ThenBy(c => c.OperatorName).ToList();
-        }
+                string result = $"{binaryExpression.Left.ToString()} {binaryExpression.NodeType} {binaryExpression.Right.ToString()}";
 
-        private static void CheckConditions(List<ConditionModel> conditions, BinaryExpression binaryExpression)
-        {
-            if (binaryExpression.NodeType == ExpressionType.AndAlso)
-            {
-                if(binaryExpression.Left is BinaryExpression left)
+                result = result
+                    .Replace("GreaterThanOrEqual", ">=")
+                    .Replace("LessThanOrEqual", "<=")
+                    .Replace("AndAlso", "AND")
+                    .Replace("OrElse", "OR")
+                    .Replace("\"", "'")
+                    .Replace("GreaterThan", ">")
+                    .Replace("LessThan", "<")
+                    .Replace("Equal", "=");
+                ;
+
+                List<string> parameterNames = new List<string>();
+
+                List<string> columnNames = new List<string>();
+
+                GetParameterNames(binaryExpression, parameterNames, columnNames);
+
+                foreach(var str in parameterNames)
                 {
-                    CheckConditions(conditions, left);
+                    result = result.Replace($"{str}.", "");
                 }
-                
-                if(binaryExpression.Right is BinaryExpression right)
+
+                foreach(var str in columnNames)
                 {
-                    CheckConditions(conditions, right);
+                    var columnName = registeredClass.RegisteredProperties.First(p => p.PropertyName == str).ColumnName;
+
+                    result = result.Replace(str, $"\"{columnName}\"");
+                }
+
+                result = result.Replace("==", "=");
+
+                return result;
+            }
+
+            return string.Empty;
+        }
+
+        public static string GetWhereClause<C>(C item, RegisteredClass registeredClass, string delimiter = "AND")
+        {
+            if (item == null)
+            {
+                throw new NullReferenceException("The item cannot be null.");
+            }
+
+            string result = string.Empty;
+            
+            foreach(var property in registeredClass.RegisteredProperties)
+            {
+                result = $"{result} \"{property.ColumnName}\" =";
+
+                if (property.PropertyType == typeof(string))
+                {
+                    result = $"{result} '{item.GetType().GetProperty(property.PropertyName).GetValue(item, null)}' {delimiter}";
+                }
+                else
+                {
+                    result = $"{result} {item.GetType().GetProperty(property.PropertyName).GetValue(item)} {delimiter}";
                 }
             }
-            else
+
+            int remove = delimiter.Length + 1;
+
+            result = result[0..^remove];
+
+            return result;
+        }
+
+        private static void GetParameterNames(BinaryExpression binaryExpression, List<string> parameterNames, List<string> columnNames)
+        {
+            if (binaryExpression.Left is BinaryExpression left)
             {
-                conditions.Add(GetCondition(binaryExpression));
+                GetParameterNames(left, parameterNames, columnNames);
             }
-        }
 
-        private static ConditionModel GetCondition(BinaryExpression binaryExpression)
-        {
-            ConditionModel condition = new ConditionModel
+            if (binaryExpression.Right is BinaryExpression right)
             {
-                Name = ((MemberExpression)binaryExpression.Left).Member.Name,
-                Value = binaryExpression
-                .Right.GetType().GetProperty("Value")
-                .GetValue(binaryExpression.Right, null),
-
-                OperatorName = binaryExpression.NodeType.ToString()
-            };
-            return condition;
-        }
-
-        public enum QueryType
-        {
-            Get
-            , GetList
-            , Delete
-            , Update
-        }
-
-
-
-
-
-
-        //IDBObject events
-        public static async Task OnLoaded<C>(C obj, DBAutomator dBAutomator)
-        {
-            if (obj is IDBObject dBObject)
-            {
-                dBObject.IsDirty = false;
-
-                dBObject.IsNewRecord = false;
-
-                await dBObject.OnLoaded(dBAutomator);
+                GetParameterNames(right, parameterNames, columnNames);
             }
-        }
 
-        public static async Task OnSave<C>(C obj, DBAutomator dBAutomator)
-        {
-            if (obj is IDBObject dBObject)
+            if (binaryExpression.Left is MemberExpression memberExpression)
             {
-                await dBObject.OnSave(dBAutomator);
-            }
-        }
+                if (memberExpression.Expression is ParameterExpression thisExpression)
+                {
+                    if (!parameterNames.Any(p => p == thisExpression.Name))
+                    {
+                        parameterNames.Add(thisExpression.Name);
+                    }
+                }
 
-        public static async Task OnSaved<C>(C obj, DBAutomator dBAutomator)
-        {
-            if (obj is IDBObject dBObject)
-            {
-                dBObject.IsDirty = false;
-
-                dBObject.IsNewRecord = false;
-
-                await dBObject.OnLoaded(dBAutomator);
+                if (!columnNames.Any(c => c == memberExpression.Member.Name))
+                {
+                    columnNames.Add(memberExpression.Member.Name);
+                }
             }
         }
     }

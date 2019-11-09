@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace DBAutomatorLibrary
+namespace DBAutomatorStandard
 {
-    internal interface IDeleteQuery<I, C>
+    internal interface IDeleteQuery <C> //<I, C>
     {
-        //Expression<Func<C, object>> Collection { get; }
-        //List<ConditionModel> ConditionModels { get; }
+        Task<int> DeleteAsync(C item);
 
-        //Task<List<I>> GetListAsync();
-        //Task<I> GetAsync();
-        Task<List<I>> DeleteAsync();
+        Task<IEnumerable<C>> DeleteAsync(Expression<Func<C, object>>? where = null);
     }
 }

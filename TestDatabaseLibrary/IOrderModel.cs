@@ -1,4 +1,5 @@
-﻿using DBAutomatorLibrary;
+﻿using DBAutomatorStandard;
+using System.ComponentModel.DataAnnotations;
 
 namespace TestDatabaseLibrary
 {
@@ -7,7 +8,7 @@ namespace TestDatabaseLibrary
     {
         long CustomerID { get; set; }
 
-        [Identity]
+        [Key]
         long OrderID { get; set; }
     }
 }

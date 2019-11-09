@@ -1,6 +1,6 @@
-﻿using DBAutomatorLibrary;
+﻿using DBAutomatorStandard;
 
-namespace TestDatabaseLibrary
+namespace DBAutomatorStandard
 {
     //[TableName("UserAddress")]
     public interface IUserAddressModel

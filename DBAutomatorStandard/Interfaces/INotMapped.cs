@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DBAutomatorLibrary
+namespace DBAutomatorStandard
 {
     public interface INotMapped
     {
