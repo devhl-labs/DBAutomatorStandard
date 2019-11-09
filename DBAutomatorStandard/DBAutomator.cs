@@ -89,7 +89,7 @@ namespace DBAutomatorStandard
             }
         }
 
-        public async Task InsertAsync<C>(C item, QueryOptions? queryOptions = null)
+        public async Task<int> InsertAsync<C>(C item, QueryOptions? queryOptions = null)
         {
             try
             {
@@ -111,7 +111,7 @@ namespace DBAutomatorStandard
                     throw new NotImplementedException();
                 }
 
-                await query.InsertAsync(item);
+                return await query.InsertAsync(item);
             }
             catch (Exception e)
             {

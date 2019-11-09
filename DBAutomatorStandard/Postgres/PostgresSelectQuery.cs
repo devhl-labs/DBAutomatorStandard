@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using static DBAutomatorStandard.Statics;
 
 namespace DBAutomatorStandard
 {
@@ -25,9 +26,13 @@ namespace DBAutomatorStandard
 
         public async Task<IEnumerable<C>> GetAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
         {       
-            DynamicParameters p = new DynamicParameters();
-
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+
+            List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? binaryExpression = GetBinaryExpression(where);
+
+            GetExpressions(binaryExpression, expressions, registeredClass);
 
             string sql = $"SELECT";
 
@@ -42,7 +47,7 @@ namespace DBAutomatorStandard
 
             if (where != null)
             {
-                sql = $"{sql} WHERE {where.GetWhereClause(registeredClass)}";
+                sql = $"{sql} WHERE {where.GetWhereClause(registeredClass, expressions)}";
             }
 
             if (orderBy != null)
@@ -53,6 +58,8 @@ namespace DBAutomatorStandard
             sql = $"{sql};";
 
             _logger.LogTrace(sql);
+
+            DynamicParameters p = GetDynamicParametersFromExpression(expressions);
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 

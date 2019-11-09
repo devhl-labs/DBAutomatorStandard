@@ -31,9 +31,9 @@ namespace DBAutomatorStandard
                 throw new NullReferenceException("The item cannot be null.");
             }
 
-            DynamicParameters p = new DynamicParameters();
-
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+
+            DynamicParameters p = GetDynamicParameters(item, registeredClass);
 
             string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {GetWhereClause(item, registeredClass)};";
 
@@ -64,15 +64,26 @@ namespace DBAutomatorStandard
 
         public async Task<IEnumerable<C>> DeleteAsync(Expression<Func<C, object>>? where = null)
         {
-            //todo is item an ienumerable?
-
-            DynamicParameters p = new DynamicParameters();
-
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {where.GetWhereClause(registeredClass)} RETURNING *;";
+            List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? binaryExpression = GetBinaryExpression(where);
+
+            GetExpressions(binaryExpression, expressions, registeredClass);
+
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\"";
+
+            if (where != null)
+            {
+                sql = $"{sql} WHERE {where.GetWhereClause(registeredClass, expressions)}";
+            }
+
+            sql = $"{sql} RETURNING *;";
 
             _logger.LogTrace(sql);
+
+            DynamicParameters p = GetDynamicParametersFromExpression(expressions);
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
@@ -80,7 +91,7 @@ namespace DBAutomatorStandard
 
             Stopwatch stopwatch = StopWatchStart();
 
-            var result = await connection.QueryAsync<C>(sql, p);
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopwatch, "GetAsync()");
 

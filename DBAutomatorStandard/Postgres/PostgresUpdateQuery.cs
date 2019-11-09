@@ -26,21 +26,35 @@ namespace DBAutomatorStandard
         }
 
         public async Task<IEnumerable<C>> UpdateAsync(Expression<Func<C, object>> setCollection, Expression<Func<C, object>>? whereCollection = null)
-        {
-            DynamicParameters p = new DynamicParameters();
-
+        {         
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(registeredClass)}";
+            List<ExpressionModel<C>> setExpressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? setBinaryExpression = GetBinaryExpression(setCollection);
+
+            GetExpressions(setBinaryExpression, setExpressions, registeredClass, "s_");
+
+            List<ExpressionModel<C>> whereExpressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? whereBinaryExpression = GetBinaryExpression(whereCollection);
+
+            GetExpressions(whereBinaryExpression, whereExpressions, registeredClass);
+
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(registeredClass, setExpressions)}";
 
             if (whereCollection != null)
             {
-                sql = $"{sql} WHERE {whereCollection.GetWhereClause(registeredClass)}";
+                sql = $"{sql} WHERE {whereCollection.GetWhereClause(registeredClass, whereExpressions)}";
             }
 
             sql = $"{sql} RETURNING *;";
 
             _logger.LogTrace(sql);
+
+            DynamicParameters p = GetDynamicParametersFromExpression(setExpressions);
+
+            GetDynamicParametersFromExpression(whereExpressions, p);
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
@@ -48,7 +62,7 @@ namespace DBAutomatorStandard
 
             var stopWatch = StopWatchStart();
 
-            var result = await connection.QueryAsync<C>(sql, p);
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopWatch, "UpdateAsync");
 
@@ -64,9 +78,9 @@ namespace DBAutomatorStandard
                 throw new NullReferenceException("The item cannot be null.");
             }
 
-            DynamicParameters p = new DynamicParameters();
-
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+
+            DynamicParameters p = GetDynamicParameters(item, registeredClass);
 
             var keys = registeredClass.RegisteredProperties.Where(p => p.IsKey);
 
@@ -110,7 +124,7 @@ namespace DBAutomatorStandard
 
             var stopWatch = StopWatchStart();
 
-            var result = await connection.QuerySingleAsync<C>(sql, p);
+            var result = await connection.QuerySingleAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopWatch, "UpdateAsync");
 

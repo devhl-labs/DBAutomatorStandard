@@ -34,35 +34,70 @@ namespace TestConsole
 
             postgres.OnSlowQueryDetected += Postgres_OnSlowQueryDetected;
 
-            IUserModel newUser = new UserModel
+            UserModel newUser1 = new UserModel
             {
-                UserID = 13,
+                UserID = 1,
                 UserName = "abc"
             };
-
-
-            //await postgres.InsertAsync<IUserModel, UserModel>(newUser);
-
-
+            UserModel newUser2 = new UserModel
+            {
+                UserID = 2,
+                UserName = "abc"
+            };
+            UserModel newUser3 = new UserModel
+            {
+                UserID = 3,
+                UserName = "abc"
+            };
+            UserModel newUser4 = new UserModel
+            {
+                UserID = 4,
+                UserName = "abc"
+            };
+            UserModel newUser5 = new UserModel
+            {
+                UserID = 5,
+                UserName = "abc"
+            };
+            UserModel newUser6 = new UserModel
+            {
+                UserID = 6,
+                UserName = "abc"
+            };
 
             OrderByClause<UserModel> orderBy = new OrderByClause<UserModel>(postgres);
 
             orderBy.Asc(nameof(UserModel.UserID));
             orderBy.Asc(nameof(UserModel.UserName));
-            
 
-            var a = await postgres.GetAsync(u => u.UserID > 2, orderBy);
-            var b = await postgres.GetAsync<UserModel>(u => u.UserID < 2);
-            var c = await postgres.GetAsync<UserModel>(u => u.UserID >= 2);
-            var d = await postgres.GetAsync<UserModel>(u => u.UserID <= 2);
-            var e = await postgres.GetAsync<UserModel>(u => u.UserID == 13);
+            var a = await postgres.DeleteAsync<UserModel>();
 
-            var f = await postgres.DeleteAsync(newUser as UserModel);
+            var b = await postgres.InsertAsync(newUser1);
+            var c = await postgres.InsertAsync(newUser2);
+            var d = await postgres.InsertAsync(newUser3);
+            var e = await postgres.InsertAsync(newUser4);
+            var f = await postgres.InsertAsync(newUser5);
+            var g = await postgres.InsertAsync(newUser6);
 
-            var g = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changed", u => u.UserID == 13);
-            var h = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changedagain");
-            e.First().UserName = "xyz";
-            var i = await postgres.UpdateAsync(e.First());
+            newUser1.UserName = "changed";
+
+            var h = await postgres.UpdateAsync(newUser1);
+
+            var i = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changed again", u => u.UserName == "changed");
+
+            var j = await postgres.GetAsync<UserModel>(u => u.UserID > 2);
+            var k = await postgres.GetAsync<UserModel>(u => u.UserID < 2);
+            var l = await postgres.GetAsync<UserModel>(u => u.UserID >= 2);
+            var m = await postgres.GetAsync<UserModel>(u => u.UserID <= 2);
+            var n = await postgres.GetAsync<UserModel>(u => u.UserID == 2);
+            var o = await postgres.GetAsync<UserModel>(u => u.UserID == 2 || u.UserName == "changed again");
+            var p = await postgres.GetAsync<UserModel>(u => u.UserID == 2 || u.UserName == "changed again", orderBy);
+
+            var q = await postgres.DeleteAsync<UserModel>(u => u.UserID == 6);
+
+            var r = await postgres.DeleteAsync(newUser5);
+
+
 
 
 

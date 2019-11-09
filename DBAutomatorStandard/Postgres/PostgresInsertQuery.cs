@@ -1,12 +1,11 @@
 ﻿using Dapper;
-using DBAutomatorStandard;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using System;
-using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using static DBAutomatorStandard.Statics;
 
 namespace DBAutomatorStandard
 {
@@ -35,15 +34,16 @@ namespace DBAutomatorStandard
             {
                 sql = $"{sql}\"{property.ColumnName}\", ";
 
-                if (property.PropertyType == typeof(ulong))
-                {
-                    p.Add(property.ColumnName, Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item)));
-                }
-                else
-                {
-                    p.Add(property.ColumnName, item.GetType().GetProperty(property.PropertyName).GetValue(item));
-                }
+                //if (property.PropertyType == typeof(ulong))
+                //{
+                //    p.Add(property.ColumnName, Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item)));
+                //}
+                //else
+                //{
+                //    p.Add(property.ColumnName, item.GetType().GetProperty(property.PropertyName).GetValue(item));
+                //}
 
+                p = GetDynamicParameters(item, registeredClass);
             }
 
             sql = sql[0..^2];
@@ -72,7 +72,7 @@ namespace DBAutomatorStandard
 
             var stopWatch = StopWatchStart();
 
-            int result = await connection.ExecuteAsync(sql, p);
+            int result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopWatch, "PostgresInsertQuery");
 
