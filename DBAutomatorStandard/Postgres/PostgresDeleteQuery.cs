@@ -39,6 +39,11 @@ namespace DBAutomatorStandard
 
             _logger.LogTrace(sql);
 
+            if (item is IDBObject dBObject)
+            {
+                await dBObject.OnDeleteAsync(_dBAutomator);
+            }
+
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
             await connection.OpenAsync();
@@ -48,6 +53,11 @@ namespace DBAutomatorStandard
             var result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopwatch, "GetAsync()");
+
+            if (item is IDBObject dBObject1)
+            {
+                await dBObject1.OnDeletedAsync(_dBAutomator);
+            }
 
             return result;
         }

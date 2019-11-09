@@ -7,45 +7,32 @@ namespace DBAutomatorStandard
 {
     public interface IDBObject
     {
-        /// <summary>
-        /// default this to true in your class
-        /// </summary>
-        bool IsNewRecord { get; set; }
+        Task OnInsertAsync(DBAutomator dBAutomator);
 
+        Task OnInsertedAsync(DBAutomator dBAutomator);
 
-        /// <summary>
-        /// track this yourself however you wish
-        /// </summary>
-        bool IsDirty { get; set; }
+        Task OnUpdateAsync(DBAutomator dBAutomator);
 
-
-
-        Task OnInsert(DBAutomator dBAutomator);
-
-        Task OnInserted(DBAutomator dBAutomator);
-
-        Task OnUpdate(DBAutomator dBAutomator);
-
-        Task OnUpdated(DBAutomator dBAutomator);
+        Task OnUpdatedAsync(DBAutomator dBAutomator);
 
         /// <summary>
         /// called after OnInsert or OnUpdate
         /// </summary>
         /// <param name="dBAutomator"></param>
         /// <returns></returns>
-        Task OnSave(DBAutomator dBAutomator);
+        Task OnSaveAsync(DBAutomator dBAutomator);
 
         /// <summary>
         /// called after OnInserted or OnUpdated
         /// </summary>
         /// <param name="dBAutomator"></param>
         /// <returns></returns>
-        Task OnSaved(DBAutomator dBAutomator);
+        Task OnSavedAsync(DBAutomator dBAutomator);
 
-        Task OnLoaded(DBAutomator dBAutomator);
+        Task OnLoadedAsync(DBAutomator dBAutomator);
 
-        Task OnDelete(DBAutomator dBAutomator);
+        Task OnDeleteAsync(DBAutomator dBAutomator);
 
-        Task OnDeleted(DBAutomator dBAutomator);
+        Task OnDeletedAsync(DBAutomator dBAutomator);
     }
 }

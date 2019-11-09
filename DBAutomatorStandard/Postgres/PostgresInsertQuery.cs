@@ -61,6 +61,11 @@ namespace DBAutomatorStandard
 
             _logger.LogTrace(sql);
 
+            if (item is IDBObject dBObject)
+            {
+                await dBObject.OnInsertAsync(_dBAutomator);
+            }
+
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
             connection.Open();
@@ -72,6 +77,11 @@ namespace DBAutomatorStandard
             StopWatchEnd(stopWatch, "PostgresInsertQuery");
 
             connection.Close();
+
+            if (item is IDBObject dBObject1)
+            {
+                await dBObject1.OnInsertAsync(_dBAutomator);
+            }
 
             return result;
         }

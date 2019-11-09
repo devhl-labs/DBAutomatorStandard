@@ -11,7 +11,6 @@ namespace TestDatabaseLibrary
     {
         private const string _source = nameof(UserModel);
 
-        //[ColumnName("mycolumn")]
         [Key]
         public ulong UserID { get; set; }
 
@@ -26,58 +25,59 @@ namespace TestDatabaseLibrary
         [NotMapped]
         public bool IsNewRecord { get; set; } = true;
 
-        [NotMapped]
-        public bool IsDirty { get; set; }
 
-        public Task OnDelete(DBAutomator dBAutomator)
+
+
+
+        public Task OnDeleteAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnDelete", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnDeleted(DBAutomator dBAutomator)
+        public Task OnDeletedAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnDeleted", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnInsert(DBAutomator dBAutomator)
+        public Task OnInsertAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnInsert", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnInserted(DBAutomator dBAutomator)
+        public Task OnInsertedAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnInserted", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnLoaded(DBAutomator dBAutomator)
+        public Task OnLoadedAsync(DBAutomator dBAutomator)
         {
-            dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnLoaded", nameof(UserModel));
+            dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnLoadedAsync", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnSave(DBAutomator dBAutomator)
+        public Task OnSaveAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnSave", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnSaved(DBAutomator dBAutomator)
+        public Task OnSavedAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnSaved", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnUpdate(DBAutomator dBAutomator)
+        public Task OnUpdateAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnUpdate", nameof(UserModel));
             return Task.CompletedTask;
         }
 
-        public Task OnUpdated(DBAutomator dBAutomator)
+        public Task OnUpdatedAsync(DBAutomator dBAutomator)
         {
             dBAutomator.Logger?.LogDebug("{source}: {method} {type}", _source, "OnUpdated", nameof(UserModel));
             return Task.CompletedTask;

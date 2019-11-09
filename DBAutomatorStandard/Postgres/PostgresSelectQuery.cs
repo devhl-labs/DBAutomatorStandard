@@ -64,6 +64,14 @@ namespace DBAutomatorStandard
 
             StopWatchEnd(stopwatch, "GetAsync()");
 
+            foreach(var item in result)
+            {
+                if (item is IDBObject dBObject)
+                {
+                    await dBObject.OnLoadedAsync(_dBAutomator);
+                }
+            }
+
             return result;
 
             //try
