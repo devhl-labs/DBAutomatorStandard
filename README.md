@@ -20,7 +20,7 @@ postgres.Register(new UserAddressModel());
 
 Now you can save and retrieve your objects using Linq.  
 ```csharp
-//delete the entire table
+//delete all rows in the table
 var a = await postgres.DeleteAsync<UserModel>();
 
 //insert a new row
@@ -28,7 +28,6 @@ var b = await postgres.InsertAsync(newUser1);
 
 //update an existing row
 newUser1.UserName = "changed";
-
 var h = await postgres.UpdateAsync(newUser1);
 
 //update all matching rows
@@ -42,4 +41,7 @@ var p = await postgres.GetAsync(u => u.UserID == 2 || u.UserName == "changed aga
 ```
 
 ## Configuring Your Classes
-This library uses five attributes from Entity Framework: Key, NotMapped, Table, Column, and DatabaseGenerated.  Decorate your POCO classes with these attributes.  The option you provide to the DatabaseGenereated is not relevant.  The library will also work with views so you can easily get joins working.  This library is tested with PostgreSQL but it may work with other libraries as well.
+This library uses five attributes from Entity Framework: Key, NotMapped, Table, Column, and DatabaseGenerated.  Decorate your POCO classes with these attributes.  The option you provide to the DatabaseGenereated is not relevant.  The library will also work with views so you can easily get joins working.  
+
+## Compatibility
+This library is tested with PostgreSQL but it may work with other libraries as well.  The table definitions used while testing can be found in the UserModel, AddressModel, and UserAddressModel files.
