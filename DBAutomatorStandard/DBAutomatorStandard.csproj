@@ -17,6 +17,7 @@
     <RepositoryUrl>https://github.com/devhl-labs/DBAutomator</RepositoryUrl>
     <PackageTags>DBAutomator database Linq db2linq database2linq databasetolinq devhl</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +26,9 @@
     <PackageReference Include="EntityFramework" Version="6.3.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.0.0" />
     <PackageReference Include="Npgsql" Version="4.1.0-preview2" />
+    <None Include="..\icon.png" Pack="true" PackagePath="">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
