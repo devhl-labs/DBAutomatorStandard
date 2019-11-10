@@ -1,7 +1,7 @@
 # devhl.DBAutomator
 This .NET Standard 2.1 library allows you to easily save and retrieve your objects from a database.
 
-## [TestConsole](/TestConsole)
+## [Test Program](/TestConsole/Program.cs)
 This console program shows you how to use this library.  Begin by instantiating a QueryOptions object, and pass that into the DBAutomator class.  Then register your database POCO classes with the library.
 ```csharp
 QueryOptions queryOptions = new QueryOptions
