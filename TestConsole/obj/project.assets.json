@@ -429,7 +429,7 @@
           }
         }
       },
-      "DBAutomatorStandard/1.0.0": {
+      "DBAutomator/0.1.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
@@ -439,17 +439,17 @@
           "Npgsql": "4.1.0-preview2"
         },
         "compile": {
-          "bin/placeholder/DBAutomatorStandard.dll": {}
+          "bin/placeholder/DBAutomator.dll": {}
         },
         "runtime": {
-          "bin/placeholder/DBAutomatorStandard.dll": {}
+          "bin/placeholder/DBAutomator.dll": {}
         }
       },
       "TestDatabaseLibrary/1.0.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "DBAutomatorStandard": "1.0.0",
+          "DBAutomator": "0.1.0",
           "EntityFramework": "6.3.0"
         },
         "compile": {
@@ -1804,7 +1804,7 @@
         "version.txt"
       ]
     },
-    "DBAutomatorStandard/1.0.0": {
+    "DBAutomator/0.1.0": {
       "type": "project",
       "path": "../DBAutomatorStandard/DBAutomatorStandard.csproj",
       "msbuildProject": "../DBAutomatorStandard/DBAutomatorStandard.csproj"
@@ -1817,7 +1817,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v3.0": [
-      "DBAutomatorStandard >= 1.0.0",
+      "DBAutomator >= 0.1.0",
       "TestDatabaseLibrary >= 1.0.0"
     ]
   },

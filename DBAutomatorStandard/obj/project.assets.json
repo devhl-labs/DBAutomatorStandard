@@ -2020,10 +2020,10 @@
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
-    "version": "1.0.0",
+    "version": "0.1.0",
     "restore": {
       "projectUniqueName": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
-      "projectName": "DBAutomatorStandard",
+      "projectName": "DBAutomator",
       "projectPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
       "packagesPath": "C:\\Users\\devhl\\.nuget\\packages\\",
       "outputPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\obj\\",

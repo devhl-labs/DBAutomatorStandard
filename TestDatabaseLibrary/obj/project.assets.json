@@ -490,7 +490,7 @@
           "lib/netstandard2.0/System.Threading.Tasks.Extensions.dll": {}
         }
       },
-      "DBAutomatorStandard/1.0.0": {
+      "DBAutomator/0.1.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
@@ -500,10 +500,10 @@
           "Npgsql": "4.1.0-preview2"
         },
         "compile": {
-          "bin/placeholder/DBAutomatorStandard.dll": {}
+          "bin/placeholder/DBAutomator.dll": {}
         },
         "runtime": {
-          "bin/placeholder/DBAutomatorStandard.dll": {}
+          "bin/placeholder/DBAutomator.dll": {}
         }
       }
     }
@@ -2022,7 +2022,7 @@
         "version.txt"
       ]
     },
-    "DBAutomatorStandard/1.0.0": {
+    "DBAutomator/0.1.0": {
       "type": "project",
       "path": "../DBAutomatorStandard/DBAutomatorStandard.csproj",
       "msbuildProject": "../DBAutomatorStandard/DBAutomatorStandard.csproj"
@@ -2030,7 +2030,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETStandard,Version=v2.1": [
-      "DBAutomatorStandard >= 1.0.0",
+      "DBAutomator >= 0.1.0",
       "EntityFramework >= 6.3.0"
     ]
   },
