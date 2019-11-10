@@ -71,9 +71,62 @@ namespace devhl.DBAutomator
             );
 
             SqlMapper.SetTypeMap(someClass.GetType(), map);
-
-
         }
+
+        //public RegisteredClass()
+        //{
+        //    TableName = GetTableName();
+
+        //    Dictionary<string, string> columnMaps = new Dictionary<string, string>();
+
+        //    foreach (PropertyInfo property in typeof(C).GetProperties())
+        //    {
+        //        if (property.IsStorable())
+        //        {
+        //            RegisteredProperty registeredProperty = new RegisteredProperty
+        //            {
+        //                Property = property,
+
+        //                ColumnName = GetColumnName(property),
+
+        //                IsKey = IsKey(property),
+
+        //                IsAutoIncrement = IsAutoIncrement(property),
+
+        //                PropertyName = $"{property.Name}",
+
+        //                PropertyType = property.PropertyType
+        //            };
+
+        //            RegisteredProperties.Add(registeredProperty);
+
+        //            if (registeredProperty.PropertyName != registeredProperty.ColumnName)
+        //            {
+        //                columnMaps.Add(registeredProperty.ColumnName, registeredProperty.PropertyName);
+        //            }
+        //        }
+        //    }
+
+        //    var mapper = new Func<Type, string, PropertyInfo>((type, columnName) =>
+        //    {
+        //        if (columnMaps.ContainsKey(columnName))
+        //        {
+        //            return type.GetProperty(columnMaps[columnName]);
+        //        }
+        //        else
+        //        {
+        //            return type.GetProperty(columnName);
+        //        }
+        //    });
+
+        //    var map = new CustomPropertyTypeMap(
+        //        typeof(C),
+        //        (type, columnName) => mapper(type, columnName)
+        //    );
+
+        //    SqlMapper.SetTypeMap(typeof(C), map);
+        //}
+
 
         private bool IsAutoIncrement(PropertyInfo property)
         {
@@ -95,6 +148,16 @@ namespace devhl.DBAutomator
             return false;
         }
 
+        //private string GetTableName()
+        //{
+        //    string result = typeof(C).Name;
+
+        //    if (typeof(C).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
+        //    {
+        //        result = tableNameAttribute.Name;
+        //    }
+        //    return result;
+        //}
         private string GetTableName(object someClass)
         {
             string result = someClass.GetType().Name;

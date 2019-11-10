@@ -5,7 +5,7 @@ using static devhl.DBAutomator.Enums;
 
 namespace devhl.DBAutomator
 {
-    public class OrderByClause <T>
+    public class OrderByClause <C>
     {
         private readonly DBAutomator _dBAutomator;
 
@@ -18,7 +18,7 @@ namespace devhl.DBAutomator
         {
             _dBAutomator = dBAutomator;
 
-            _registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(T));
+            _registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
             foreach(var order in orderBy)
             {

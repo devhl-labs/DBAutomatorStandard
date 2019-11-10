@@ -45,6 +45,20 @@ namespace devhl.DBAutomator
             }
         }
 
+        //public void Register<C>()
+        //{
+        //    try
+        //    {
+        //        var registeredClass = new RegisteredClass<C>();
+
+        //        RegisteredClasses.Add(registeredClass);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        throw new DbAutomatorException(e.Message, e);
+        //    }
+        //}
+
 
         internal void SlowQueryDetected(string methodName, TimeSpan timeSpan)
         {
