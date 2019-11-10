@@ -1,15 +1,18 @@
-﻿using Dapper;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using static DBAutomatorStandard.Statics;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorStandard
+using static devhl.DBAutomator.PostgresMethods;
+
+using Dapper;
+using Npgsql;
+
+
+namespace devhl.DBAutomator
 {
     internal class PostgresDeleteQuery <C> : IDeleteQuery<C>
     {
@@ -33,9 +36,9 @@ namespace DBAutomatorStandard
 
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            DynamicParameters p = GetDynamicParameters(item, registeredClass);
+            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {GetWhereClause(item, registeredClass)};";
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {GetWhereClause(item, registeredClass.RegisteredProperties)};";
 
             _logger.LogTrace(sql);
 
@@ -76,7 +79,7 @@ namespace DBAutomatorStandard
 
             if (where != null)
             {
-                sql = $"{sql} WHERE {where.GetWhereClause(registeredClass, expressions)}";
+                sql = $"{sql} WHERE {where.GetWhereClause(expressions)}";
             }
 
             sql = $"{sql} RETURNING *;";

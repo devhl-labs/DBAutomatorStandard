@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Data;
-using static DBAutomatorStandard.Enums;
 
-namespace DBAutomatorStandard
+using static devhl.DBAutomator.Enums;
+
+namespace devhl.DBAutomator
 {
     public class QueryOptions
     {

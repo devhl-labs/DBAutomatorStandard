@@ -1,6 +1,6 @@
 ﻿//using System;
 
-//namespace DBAutomatorStandard
+//namespace devhl.DBAutomator
 //{
 //    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 

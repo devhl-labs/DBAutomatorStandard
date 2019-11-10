@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace DBAutomatorStandard
+namespace devhl.DBAutomator
 {
     [Serializable]
     public class DbAutomatorException : Exception

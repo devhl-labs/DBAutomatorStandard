@@ -1,4 +1,4 @@
-﻿namespace DBAutomatorStandard
+﻿namespace devhl.DBAutomator
 {
     public class Enums
     {

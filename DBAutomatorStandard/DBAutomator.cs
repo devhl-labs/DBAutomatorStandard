@@ -1,20 +1,12 @@
-﻿using Dapper;
-using DBAutomatorStandard;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using static DBAutomatorStandard.Enums;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorStandard
+using static devhl.DBAutomator.Enums;
+
+namespace devhl.DBAutomator
 {
     public delegate void IsAvailableChangedEventHandler(bool isAvailable);
 
@@ -89,7 +81,7 @@ namespace DBAutomatorStandard
             }
         }
 
-        public async Task<int> InsertAsync<C>(C item, QueryOptions? queryOptions = null)
+        public async Task<C> InsertAsync<C>(C item, QueryOptions? queryOptions = null)
         {
             try
             {
@@ -100,11 +92,11 @@ namespace DBAutomatorStandard
 
                 queryOptions ??= QueryOptions;
 
-                IInsertQuery query;
+                IInsertQuery<C> query;
 
                 if (queryOptions.DataStore == DataStore.PostgreSQL)
                 {
-                    query = new PostgresInsertQuery(this, queryOptions, Logger);
+                    query = new PostgresInsertQuery<C>(this, queryOptions, Logger);
                 }
                 else
                 {

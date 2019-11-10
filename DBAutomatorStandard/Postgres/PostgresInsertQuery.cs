@@ -1,15 +1,17 @@
-﻿using Dapper;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using static DBAutomatorStandard.Statics;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorStandard
+using Dapper;
+using Npgsql;
+
+using static devhl.DBAutomator.PostgresMethods;
+
+namespace devhl.DBAutomator
 {
-    internal class PostgresInsertQuery : IInsertQuery
+    internal class PostgresInsertQuery <C> : IInsertQuery <C>
     {
         private readonly DBAutomator _dBAutomator;
         private readonly QueryOptions _queryOptions;
@@ -22,42 +24,36 @@ namespace DBAutomatorStandard
             _logger = logger;
         }
 
-        public async Task<int> InsertAsync(object item)
+        public async Task<C> InsertAsync(C item)
         {
-            DynamicParameters p = new DynamicParameters();
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item), "The item cannot be null");
+            }
 
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == item.GetType());
 
+            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
+
             string sql = $"INSERT INTO \"{registeredClass.TableName}\" (";
 
-            foreach (var property in registeredClass.RegisteredProperties)
+            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement))
             {
                 sql = $"{sql}\"{property.ColumnName}\", ";
-
-                //if (property.PropertyType == typeof(ulong))
-                //{
-                //    p.Add(property.ColumnName, Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item)));
-                //}
-                //else
-                //{
-                //    p.Add(property.ColumnName, item.GetType().GetProperty(property.PropertyName).GetValue(item));
-                //}
-
-                p = GetDynamicParameters(item, registeredClass);
             }
 
             sql = sql[0..^2];
 
             sql = $"{sql}) VALUES (";
 
-            foreach (var property in registeredClass.RegisteredProperties)
+            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement))
             {
                 sql = $"{sql}@{property.ColumnName}, ";
             }
 
             sql = sql[0..^2];
 
-            sql = $"{sql});";
+            sql = $"{sql}) RETURNING *;";
 
             _logger.LogTrace(sql);
 
@@ -72,7 +68,7 @@ namespace DBAutomatorStandard
 
             var stopWatch = StopWatchStart();
 
-            int result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QueryFirstOrDefaultAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
             StopWatchEnd(stopWatch, "PostgresInsertQuery");
 

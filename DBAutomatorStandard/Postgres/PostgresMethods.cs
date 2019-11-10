@@ -1,25 +1,49 @@
-﻿using Dapper;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Reflection;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace DBAutomatorStandard
+using Dapper;
+
+
+namespace devhl.DBAutomator
 {
-    internal static class Statics
+    internal static class PostgresMethods
     {
-        public static IEnumerable<T> EmptyIfNull<T>(this IEnumerable<T>? source) => source ?? Enumerable.Empty<T>();
-
-        public static string Left(this string param, int length)
+        public static bool IsStorable(this PropertyInfo propertyInfo)
         {
-            string result = param.Substring(0, length);
-            return result;
-        }
+            //if (typeof(INotMapped).IsAssignableFrom(propertyInfo.GetType()))
+            //{
+            //    return false;
+            //}
 
-        public static string Right(this string param, int length)
-        {
-            string result = param.Substring(param.Length - length, length);
-            return result;
+            if (propertyInfo.GetCustomAttributes<NotMappedAttribute>(true).FirstOrDefault() is NotMappedAttribute notMappedAttribute)
+            {
+                return false;
+            }
+
+            if (propertyInfo.PropertyType == typeof(string) ||
+                propertyInfo.PropertyType == typeof(ulong) ||
+                propertyInfo.PropertyType == typeof(ulong?) ||
+                propertyInfo.PropertyType == typeof(bool) ||
+                propertyInfo.PropertyType == typeof(bool?) ||
+                propertyInfo.PropertyType == typeof(decimal) ||
+                propertyInfo.PropertyType == typeof(decimal?) ||
+                propertyInfo.PropertyType == typeof(DateTime) ||
+                propertyInfo.PropertyType == typeof(DateTime?) ||
+                propertyInfo.PropertyType == typeof(int) ||
+                propertyInfo.PropertyType == typeof(int?) ||
+                propertyInfo.PropertyType == typeof(long) ||
+                propertyInfo.PropertyType == typeof(long?) ||
+
+                propertyInfo.PropertyType.IsEnum
+                )
+            {
+                return true;
+            }
+            return false;
         }
 
         public static BinaryExpression? GetBinaryExpression<C>(Expression<Func<C, object>>? where = null)
@@ -38,22 +62,7 @@ namespace DBAutomatorStandard
             return binaryExpression;
         }
 
-        public static string GetMathSymbol(this ExpressionType expression) =>
-            expression switch
-            {
-                ExpressionType.Equal => "==",
-                ExpressionType.NotEqual => "<>",
-                ExpressionType.GreaterThan => ">",
-                ExpressionType.GreaterThanOrEqual => ">=",
-                ExpressionType.LessThan => "<",
-                ExpressionType.LessThanOrEqual => "<=",
-                ExpressionType.OrElse => "OR",
-                ExpressionType.AndAlso => "AND",
-
-                _ => throw new ArgumentException("Invalid enum value", nameof(expression))
-            };
-        
-        public static string GetWhereClause<C>(this Expression<Func<C, object>>? e, RegisteredClass registeredClass, List<ExpressionModel<C>> expressions)
+        public static string GetWhereClause<C>(this Expression<Func<C, object>>? e, List<ExpressionModel<C>> expressions)
         {
             if (e == null)
             {
@@ -80,7 +89,7 @@ namespace DBAutomatorStandard
             return string.Empty;
         }
 
-        public static string GetWhereClause<C>(C item, RegisteredClass registeredClass, string delimiter = "AND")
+        public static string GetWhereClause<C>(C item, List<RegisteredProperty> registeredProperties, string delimiter = "AND")
         {
             if (item == null)
             {
@@ -89,7 +98,7 @@ namespace DBAutomatorStandard
 
             string result = string.Empty;
 
-            foreach (var property in registeredClass.RegisteredProperties)
+            foreach (var property in registeredProperties)
             {
                 result = $"{result} \"{property.ColumnName}\" = @{property.ColumnName} {delimiter}";
             }
@@ -99,34 +108,6 @@ namespace DBAutomatorStandard
             result = result[0..^remove];
 
             return result;
-        }
-
-        public static DynamicParameters GetDynamicParameters<C>(C item, RegisteredClass registeredClass)
-        {
-            if (item == null)
-            {
-                throw new NullReferenceException("The item cannot be null.");
-            }
-
-            DynamicParameters p = new DynamicParameters();
-
-            foreach (var property in registeredClass.RegisteredProperties)
-            {
-                if (property.PropertyType == typeof(string))
-                {
-                    p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item, null));
-                }
-                else if (property.PropertyType == typeof(ulong))
-                {
-                    p.Add($"@{property.ColumnName}", Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item, null)));
-                }
-                else
-                {
-                    p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item));
-                }
-            }
-
-            return p;
         }
 
         public static void GetExpressions<C>(BinaryExpression? binaryExpression, List<ExpressionModel<C>> expressions, RegisteredClass registeredClass, string parameterPrefix = "w_")
@@ -172,6 +153,58 @@ namespace DBAutomatorStandard
             }
         }
 
+        public static DynamicParameters GetDynamicParametersFromExpression<C>(List<ExpressionModel<C>> expressions, DynamicParameters? p = null)
+        {
+            p ??= new DynamicParameters();
+
+            foreach (var exp in expressions)
+            {
+                if (exp.Value is ulong)
+                {
+                    p.Add($"{exp.ParameterPrefix}{exp.ColumnName}", Convert.ToInt64(exp.Value));
+                }
+                else
+                {
+                    p.Add($"{exp.ParameterPrefix}{exp.ColumnName}", exp.Value);
+                }
+            }
+
+            return p;
+        }
+
+        public static DynamicParameters GetDynamicParameters<C>(C item, List<RegisteredProperty> registeredProperties)
+        {
+            if (item == null)
+            {
+                throw new NullReferenceException("The item cannot be null.");
+            }
+
+            DynamicParameters p = new DynamicParameters();
+
+            foreach (var property in registeredProperties.Where(p => !p.IsAutoIncrement))
+            {
+                if (property.PropertyType == typeof(string))
+                {
+                    p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item, null));
+                }
+                else if (property.PropertyType == typeof(ulong))
+                {
+                    p.Add($"@{property.ColumnName}", Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item, null)));
+                }
+                else
+                {
+                    p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item));
+                }
+            }
+
+            return p;
+        }
+
+
+
+
+
+
         private static void GetParameterNames(BinaryExpression binaryExpression, List<string> parameterNames, List<string> columnNames, List<object> values)
         {
             if (binaryExpression.Left is BinaryExpression left)
@@ -206,24 +239,29 @@ namespace DBAutomatorStandard
             }
         }
 
-        public static DynamicParameters GetDynamicParametersFromExpression<C>(List<ExpressionModel<C>> expressions, DynamicParameters? p = null)
-        {
-            p ??= new DynamicParameters();
-
-            foreach (var exp in expressions)
+        private static string GetMathSymbol(this ExpressionType expression) =>
+            expression switch
             {
-                if (exp.Value is ulong)
-                {
-                    p.Add($"{exp.ParameterPrefix}{exp.ColumnName}", Convert.ToInt64(exp.Value));
-                }
-                else
-                {
-                    p.Add($"{exp.ParameterPrefix}{exp.ColumnName}", exp.Value);
-                }
-            }
+                ExpressionType.Equal => "==",
+                ExpressionType.NotEqual => "<>",
+                ExpressionType.GreaterThan => ">",
+                ExpressionType.GreaterThanOrEqual => ">=",
+                ExpressionType.LessThan => "<",
+                ExpressionType.LessThanOrEqual => "<=",
+                ExpressionType.OrElse => "OR",
+                ExpressionType.AndAlso => "AND",
 
-            return p;
-        }
-        
+                _ => throw new ArgumentException("Invalid enum value", nameof(expression))
+            };
+
+
+
+
+
+
+
+
+
+
     }
 }

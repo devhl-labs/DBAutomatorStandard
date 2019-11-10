@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace DBAutomatorStandard
+namespace devhl.DBAutomator
 {
     public class ExpressionModel<C>
     {
-        private RegisteredClass _registeredClass;
+        private readonly RegisteredClass _registeredClass;
 
         public string ParameterPrefix { get; }
 

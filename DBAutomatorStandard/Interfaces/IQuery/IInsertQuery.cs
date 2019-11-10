@@ -4,10 +4,10 @@ using System.Data;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-namespace DBAutomatorStandard
+namespace devhl.DBAutomator
 {
-    internal interface IInsertQuery
+    internal interface IInsertQuery <C>
     {
-        Task<int> InsertAsync(object item);
+        Task<C> InsertAsync(C item);
     }
 }

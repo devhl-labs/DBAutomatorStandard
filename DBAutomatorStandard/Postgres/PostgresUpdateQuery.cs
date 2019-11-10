@@ -1,16 +1,18 @@
-﻿using Dapper;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using static DBAutomatorStandard.Statics;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorStandard
+using Dapper;
+using Npgsql;
+
+using static devhl.DBAutomator.PostgresMethods;
+
+namespace devhl.DBAutomator
 {
     internal class PostgresUpdateQuery<C> : IUpdateQuery<C>
     {
@@ -41,11 +43,11 @@ namespace DBAutomatorStandard
 
             GetExpressions(whereBinaryExpression, whereExpressions, registeredClass);
 
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(registeredClass, setExpressions)}";
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(setExpressions)}";
 
             if (whereCollection != null)
             {
-                sql = $"{sql} WHERE {whereCollection.GetWhereClause(registeredClass, whereExpressions)}";
+                sql = $"{sql} WHERE {whereCollection.GetWhereClause(whereExpressions)}";
             }
 
             sql = $"{sql} RETURNING *;";
@@ -80,7 +82,7 @@ namespace DBAutomatorStandard
 
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            DynamicParameters p = GetDynamicParameters(item, registeredClass);
+            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
 
             var keys = registeredClass.RegisteredProperties.Where(p => p.IsKey);
 
@@ -89,7 +91,7 @@ namespace DBAutomatorStandard
                 throw new Exception("The registered class does not have a primary key attribute.");
             }
 
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {GetWhereClause(item, registeredClass, ",")} WHERE";
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {GetWhereClause(item, registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement).ToList(), ",")} WHERE";
 
             foreach(var key in keys)
             {

@@ -1,15 +1,18 @@
-﻿using Dapper;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using static DBAutomatorStandard.Statics;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorStandard
+using Dapper;
+using Npgsql;
+
+
+using static devhl.DBAutomator.PostgresMethods;
+
+namespace devhl.DBAutomator
 {
     internal class PostgresSelectQuery <C> : ISelectQuery<C>
     {
@@ -47,7 +50,7 @@ namespace DBAutomatorStandard
 
             if (where != null)
             {
-                sql = $"{sql} WHERE {where.GetWhereClause(registeredClass, expressions)}";
+                sql = $"{sql} WHERE {where.GetWhereClause(expressions)}";
             }
 
             if (orderBy != null)

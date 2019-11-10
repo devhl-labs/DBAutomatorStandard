@@ -2,33 +2,13 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using Dapper;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace DBAutomatorStandard
+using Dapper;
+
+namespace devhl.DBAutomator
 {
-    public class RegisteredProperty
-    {
-#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-        public PropertyInfo Property { get; set; }
-
-        public Type PropertyType { get; set; }
-
-#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
-
-
-
-        public string ColumnName { get; set; } = string.Empty;
-
-        public string PropertyName { get; set; } = string.Empty;
-
-        public bool IsKey { get; set; }
-
-
-    }
-
-
     public class RegisteredClass
     {
         public readonly object SomeClass;
@@ -57,9 +37,11 @@ namespace DBAutomatorStandard
 
                         IsKey = IsKey(property),
 
+                        IsAutoIncrement = IsAutoIncrement(property),
+
                         PropertyName = $"{property.Name}",
 
-                        PropertyType = property.GetValue(someClass).GetType()
+                        PropertyType = property.PropertyType
                     };
 
                     RegisteredProperties.Add(registeredProperty);
@@ -91,6 +73,16 @@ namespace DBAutomatorStandard
             SqlMapper.SetTypeMap(someClass.GetType(), map);
 
 
+        }
+
+        private bool IsAutoIncrement(PropertyInfo property)
+        {
+            if (Attribute.IsDefined(property, typeof(DatabaseGeneratedAttribute)))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private bool IsKey(PropertyInfo property)

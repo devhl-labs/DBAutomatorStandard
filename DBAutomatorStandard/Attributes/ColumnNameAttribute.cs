@@ -2,7 +2,7 @@
 //using System.Collections.Generic;
 //using System.Text;
 
-//namespace DBAutomatorStandard
+//namespace devhl.DBAutomator
 //{
 //    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 //    public class ColumnNameAttribute : Attribute

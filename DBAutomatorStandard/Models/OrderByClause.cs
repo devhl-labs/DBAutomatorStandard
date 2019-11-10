@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using static DBAutomatorStandard.Enums;
 
-namespace DBAutomatorStandard
+using static devhl.DBAutomator.Enums;
+
+namespace devhl.DBAutomator
 {
     public class OrderByClause <T>
     {
@@ -13,7 +12,7 @@ namespace DBAutomatorStandard
         private readonly RegisteredClass _registeredClass;
 
 
-        private List<(string, OrderBy)> _order = new List<(string, OrderBy)>();
+        private readonly List<(string, OrderBy)> _order = new List<(string, OrderBy)>();
 
         public OrderByClause(DBAutomator dBAutomator, params (string, OrderBy)[] orderBy)
         {
