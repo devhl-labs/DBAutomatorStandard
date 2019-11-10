@@ -17,7 +17,7 @@ postgres.Register(new UserModel());
 postgres.Register(new AddressModel());
 postgres.Register(new UserAddressModel());
 ```
-
+ 
 Now you can save and retrieve your objects using Linq.  
 ```csharp
 //delete all rows in the table
