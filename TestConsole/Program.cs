@@ -68,8 +68,10 @@ namespace TestConsole
             orderBy.Asc(nameof(UserModel.UserID));
             orderBy.Asc(nameof(UserModel.UserName));
 
+            //delete the entire table
             var a = await postgres.DeleteAsync<UserModel>();
 
+            //insert a new row
             var b = await postgres.InsertAsync(newUser1);
             var c = await postgres.InsertAsync(newUser2);
             var d = await postgres.InsertAsync(newUser3);
@@ -77,12 +79,15 @@ namespace TestConsole
             var f = await postgres.InsertAsync(newUser5);
             var g = await postgres.InsertAsync(newUser6);
 
+            //update an existing row
             newUser1.UserName = "changed";
 
             var h = await postgres.UpdateAsync(newUser1);
 
+            //update all matching rows
             var i = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changed again", u => u.UserName == "changed");
 
+            //get the required rows
             var j = await postgres.GetAsync<UserModel>(u => u.UserID > 2);
             var k = await postgres.GetAsync<UserModel>(u => u.UserID < 2);
             var l = await postgres.GetAsync<UserModel>(u => u.UserID >= 2);
@@ -91,10 +96,13 @@ namespace TestConsole
             var o = await postgres.GetAsync<UserModel>(u => u.UserID == 2 || u.UserName == "changed again");
             var p = await postgres.GetAsync(u => u.UserID == 2 || u.UserName == "changed again", orderBy);
 
+            //delete all matching rows
             var q = await postgres.DeleteAsync<UserModel>(u => u.UserID == 6);
 
+            //delete a row that matches a given item
             var r = await postgres.DeleteAsync(newUser5);
 
+            //delete the entire table
             var s = await postgres.DeleteAsync<AddressModel>();
 
             var t = new AddressModel{
@@ -103,6 +111,7 @@ namespace TestConsole
                 UserID = 1
             };
 
+            //insert a new row
             var u = await postgres.InsertAsync(t);
 
             var v = new AddressModel
