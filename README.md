@@ -41,3 +41,5 @@ var o = await postgres.GetAsync<UserModel>(u => u.UserID == 2 || u.UserName == "
 var p = await postgres.GetAsync(u => u.UserID == 2 || u.UserName == "changed again", orderBy);
 ```
 
+## Configuring Your Classes
+This library uses five attributes from Entity Framework: Key, NotMapped, Table, Column, and DatabaseGenerated.  Decorate your POCO classes with these attributes.  The option you provide to the DatabaseGenereated is not relevant.  The library will also work with views so you can easily get joins working.  This library is tested with PostgreSQL but it may work with other libraries as well.
