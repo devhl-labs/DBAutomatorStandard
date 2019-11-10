@@ -5,10 +5,10 @@
   },
   "projects": {
     "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj": {
-      "version": "1.0.0",
+      "version": "0.1.0",
       "restore": {
         "projectUniqueName": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
-        "projectName": "DBAutomatorStandard",
+        "projectName": "DBAutomator",
         "projectPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\DBAutomatorStandard.csproj",
         "packagesPath": "C:\\Users\\devhl\\.nuget\\packages\\",
         "outputPath": "E:\\repos\\DBAutomatorStandard\\DBAutomatorStandard\\obj\\",
@@ -47,6 +47,10 @@
             "Dapper": {
               "target": "Package",
               "version": "[2.0.4, )"
+            },
+            "EntityFramework": {
+              "target": "Package",
+              "version": "[6.3.0, )"
             },
             "Microsoft.Extensions.Logging.Abstractions": {
               "target": "Package",
@@ -184,6 +188,12 @@
       },
       "frameworks": {
         "netstandard2.1": {
+          "dependencies": {
+            "EntityFramework": {
+              "target": "Package",
+              "version": "[6.3.0, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",

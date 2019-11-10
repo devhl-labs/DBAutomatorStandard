@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿//using System;
 
-namespace DBAutomatorLibrary
-{
-    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+//namespace devhl.DBAutomator
+//{
+//    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 
-    public class TableNameAttribute : Attribute
-    {
-        public string TableName { get; }
+//    public class TableNameAttribute : Attribute
+//    {
+//        public string TableName { get; }
 
-        public TableNameAttribute(string tableName)
-        {
-            TableName = tableName;
-        }
+//        public TableNameAttribute(string tableName)
+//        {
+//            TableName = tableName;
+//        }
 
 
-    }
-}
+//    }
+//}

@@ -1,185 +1,105 @@
-﻿using Dapper;
-using DBAutomatorStandard;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using static DBAutomatorLibrary.Statics;
-using static DBAutomatorStandard.Enums;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorLibrary
+using static devhl.DBAutomator.PostgresMethods;
+
+using Dapper;
+using Npgsql;
+
+
+namespace devhl.DBAutomator
 {
-    internal class PostgresDeleteQuery<I, C> : IDeleteQuery<I, C> where C : I where I : class
+    internal class PostgresDeleteQuery <C> : IDeleteQuery<C>
     {
-        private const string _source = nameof(PostgresDeleteQuery<I, C>);
-        private readonly string _connectionString;
-        private readonly IDbTransaction? _dbTransaction;
-        private readonly int? _commandTimeout;
         private readonly DBAutomator _dBAutomator;
-        private readonly int _slowQueryWarningInSeconds;
-        private readonly DynamicParameters _dynamicParameters = new DynamicParameters();
-        //private readonly string _schema;
-        private readonly I? _item;
+        private readonly QueryOptions _queryOptions;
+        private readonly ILogger? _logger;
 
-        public string TableName { get; }
-        public string StoredProcedureName { get; }
-        public List<ConditionModel> ConditionModels { get; } = new List<ConditionModel>();
-
-
-
-        public PostgresDeleteQuery(DBAutomator dBAutomator, string connectionString, int slowQueryWarningInSeconds, Expression<Func<C, object>>? collection, IDbTransaction? dbTransaction = null, int? commandTimeout = null)
+        public PostgresDeleteQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
-
             _dBAutomator = dBAutomator;
-            _connectionString = connectionString;
-            _slowQueryWarningInSeconds = slowQueryWarningInSeconds;
-            _dbTransaction = dbTransaction;
-            _commandTimeout = commandTimeout;
-            //_schema = schema;
-
-            ConditionModels = collection.GetConditions();
-            TableName = PostgresMapping.GetTableName<I>();
-            StoredProcedureName = PostgresMapping.GetProcedureName<I>(QueryType.Delete, TableName, ConditionModels);
-
-            foreach (ConditionModel condition in ConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition);
-            }
+            _queryOptions = queryOptions;
+            _logger = logger;
         }
 
-        public PostgresDeleteQuery(I item, DBAutomator dBAutomator, string connectionString, int slowQueryWarningInSeconds, IDbTransaction? dbTransaction = null, int? commandTimeout = null)
+        public async Task<int> DeleteAsync(C item)
         {
-            List<PropertyInfo> props = typeof(I).GetProperties().Where(prop => Attribute.IsDefined(prop, typeof(IdentityAttribute))).ToList();
-
-            if (props.Count() == 0)
+            if (item == null)
             {
-                throw new Exception($"DBAutomator Error: The item {typeof(I).Name} does not contain an identity attribute.");
+                throw new NullReferenceException("The item cannot be null.");
             }
 
-            _dBAutomator = dBAutomator;
-            _connectionString = connectionString;
-            _slowQueryWarningInSeconds = slowQueryWarningInSeconds;
-            _dbTransaction = dbTransaction;
-            _commandTimeout = commandTimeout;
-            //_schema = schema;
+            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            _item = item;
+            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
 
-            foreach (var prop in props)
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {GetWhereClause(item, registeredClass.RegisteredProperties)};";
+
+            _logger.LogTrace(sql);
+
+            if (item is IDBObject dBObject)
             {
-                ConditionModel conditionModel = new ConditionModel
-                {
-                    Name = PostgresMapping.GetColumnName<I>(prop.Name),
-                    OperatorName = "Equal",
-                    Value = prop.GetValue(item)
-                };
-
-                ConditionModels.Add(conditionModel);
+                await dBObject.OnDeleteAsync(_dBAutomator);
             }
 
-            TableName = PostgresMapping.GetTableName<I>();
-            StoredProcedureName = PostgresMapping.GetProcedureName<I>(QueryType.Delete, TableName, ConditionModels);
-
-
-
-            foreach (ConditionModel condition in ConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition);
-            }
-
-        }
-
-        public async Task<List<I>> DeleteAsync()
-        {
-            using NpgsqlConnection connection = new NpgsqlConnection(_connectionString);
+            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
             await connection.OpenAsync();
 
             Stopwatch stopwatch = StopWatchStart();
 
-            IEnumerable<C> obj;
+            var result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
-            try
+            StopWatchEnd(stopwatch, "GetAsync()");
+
+            if (item is IDBObject dBObject1)
             {
-                if (_item != null && _item is IDBObject itemOnDelete)
-                {
-                    await itemOnDelete.OnDelete(_dBAutomator);
-                }
-
-                obj = await connection.QueryAsync<C>(StoredProcedureName, _dynamicParameters, _dbTransaction, _commandTimeout, CommandType.StoredProcedure);
-
-                var result = obj.Cast<I>().ToList();
-
-                if (_item != null && _item is IDBObject itemOnDeleted)
-                {
-                    await itemOnDeleted.OnDeleted(_dBAutomator);
-                }
-                else
-                {
-                    foreach (I item in result)
-                    {
-                        if (item is IDBObject dBObject)
-                        {
-                            await dBObject.OnDeleted(_dBAutomator);
-                        }
-                    }
-                }
-
-                return result;
-            }
-            catch (PostgresException e)
-            {
-                if (e.SqlState == "42883")  //function does not exist
-                {
-                    CreateDelete(connection);
-
-                    obj = await connection.QueryAsync<C>(StoredProcedureName, _dynamicParameters, _dbTransaction, _commandTimeout, CommandType.StoredProcedure);
-
-                    var result = obj.Cast<I>().ToList();
-
-                    if (_item != null && _item is IDBObject itemOnDeleted)
-                    {
-                        await itemOnDeleted.OnDeleted(_dBAutomator);
-                    }
-                    else
-                    {
-                        foreach (I item in result)
-                        {
-                            if (item is IDBObject dBObject)
-                            {
-                                await dBObject.OnDeleted(_dBAutomator);
-                            }
-                        }
-                    }
-
-                    return result;
-                }
-
-                _dBAutomator.Logger?.LogWarning(LoggingEvents.ErrorExecutingQuery, "{source}: {method} {message}", _source, "DeleteAsync", e.Message);
-
-                throw;
+                await dBObject1.OnDeletedAsync(_dBAutomator);
             }
 
-            finally
-            {
-                StopWatchEnd(stopwatch, "InsertAsync()");
-
-                connection.Close();
-            }
+            return result;
         }
 
+        public async Task<IEnumerable<C>> DeleteAsync(Expression<Func<C, object>>? where = null)
+        {
+            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
+            List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
 
+            BinaryExpression? binaryExpression = GetBinaryExpression(where);
 
+            GetExpressions(binaryExpression, expressions, registeredClass);
 
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\"";
 
+            if (where != null)
+            {
+                sql = $"{sql} WHERE {where.GetWhereClause(expressions)}";
+            }
+
+            sql = $"{sql} RETURNING *;";
+
+            _logger.LogTrace(sql);
+
+            DynamicParameters p = GetDynamicParametersFromExpression(expressions);
+
+            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
+
+            await connection.OpenAsync();
+
+            Stopwatch stopwatch = StopWatchStart();
+
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+
+            StopWatchEnd(stopwatch, "GetAsync()");
+
+            return result;
+        }
 
         private Stopwatch StopWatchStart()
         {
@@ -191,97 +111,10 @@ namespace DBAutomatorLibrary
         private void StopWatchEnd(Stopwatch stopwatch, string methodName)
         {
             stopwatch.Stop();
-            if (stopwatch.Elapsed.TotalSeconds > _slowQueryWarningInSeconds)
+            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning)
             {
                 _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-        private void CreateDelete(NpgsqlConnection connection)
-        {
-            _dBAutomator.Logger?.LogDebug(LoggingEvents.ModifyingDatabase, "{source}: {method} {type}", _source, "CreateDelete", typeof(C));
-
-            using NpgsqlCommand command = new NpgsqlCommand
-            {
-                Connection = connection
-            };
-
-            string commandText = "";
-
-            commandText = $"{commandText}CREATE OR REPLACE FUNCTION {StoredProcedureName}(";
-
-
-            foreach (ConditionModel condition in ConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                if (condition.Value == null)
-                {
-                    throw new ArgumentNullException();
-                }
-                
-                commandText = $"{commandText}_{condition.Name.ToLower()} {condition.Value.MapToPostgreSql()}\n, ";
-            }
-
-            if (commandText.Right(2) == ", ")
-            {
-                commandText = commandText.Left(commandText.Length - 2);
-            }
-
-
-            commandText = $"{commandText})\n";
-
-            commandText = $"{commandText}RETURNS TABLE(\n";
-
-            foreach (PropertyInfo property in typeof(I).GetProperties())
-            {
-                if (property.IsStorable())
-                {
-                    commandText = $"{commandText}{property.Name} {property.MapToPostgreSql()}\n, ";
-                }
-            }
-
-            commandText = commandText.Substring(0, commandText.Length - 2);
-
-            commandText = $"{commandText})\n";
-
-            commandText = $"{commandText}LANGUAGE SQL\n";
-
-            commandText = $"{commandText}AS $$\n\n";
-
-            commandText = $"{commandText}DELETE FROM \"{TableName}\"\n";
-
-            if (ConditionModels?.Count != 0)
-            {
-                commandText = $"{commandText}WHERE\n";
-
-                foreach (ConditionModel condition in ConditionModels ?? Enumerable.Empty<ConditionModel>())
-                {
-                    commandText = $"{commandText}\"{TableName.ToLower()}\".\"{PostgresMapping.GetColumnName<I>(condition.Name)}\" {condition.Operator} _{condition.Name} AND ";
-                }
-                commandText = commandText.Substring(0, commandText.Length - 5);
-
-            }
-
-            commandText = $"{commandText}\n";
-
-            commandText = $"{commandText}RETURNING *\n";
-
-            commandText = $"{commandText}\n$$\n";
-
-            command.CommandText = commandText;
-
-            command.ExecuteNonQuery();
-        }
-
-
     }
 }

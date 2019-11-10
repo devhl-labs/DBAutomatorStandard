@@ -1,222 +1,144 @@
-﻿using Dapper;
-using DBAutomatorStandard;
-using Microsoft.Extensions.Logging;
-using Npgsql;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
-using static DBAutomatorLibrary.Statics;
-using static DBAutomatorStandard.Enums;
+using Microsoft.Extensions.Logging;
 
-namespace DBAutomatorLibrary
+using Dapper;
+using Npgsql;
+
+using static devhl.DBAutomator.PostgresMethods;
+
+namespace devhl.DBAutomator
 {
-    internal class PostgresUpdateQuery<I, C> : IUpdateQuery<I, C> where C : I where I : class
+    internal class PostgresUpdateQuery<C> : IUpdateQuery<C>
     {
-        private const string _source = nameof(PostgresUpdateQuery<I, C>);
-        private readonly string _connectionString;
-        private readonly IDbTransaction? _dbTransaction;
-        private readonly int? _commandTimeout;
         private readonly DBAutomator _dBAutomator;
-        private readonly int _slowQueryWarningInSeconds;
-        private readonly DynamicParameters _dynamicParameters = new DynamicParameters();
-        //private readonly string _schema;
-        private readonly I? _item;
+        private readonly QueryOptions _queryOptions;
+        private readonly ILogger? _logger;
 
-        public string TableName { get; }
-        public string StoredProcedureName { get; }
-        public List<ConditionModel> WhereConditionModels { get; } = new List<ConditionModel>();
-        public List<ConditionModel> SetConditionModels { get; } = new List<ConditionModel>();
-
-
-
-        public PostgresUpdateQuery(DBAutomator dBAutomator, string connectionString, int slowQueryWarningInSeconds, Expression<Func<C, object>> setCollection, Expression<Func<C, object>>? whereCollection = null, IDbTransaction? dbTransaction = null, int? commandTimeout = null)
+        public PostgresUpdateQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
-            _connectionString = connectionString;
-            _slowQueryWarningInSeconds = slowQueryWarningInSeconds;
-            _dbTransaction = dbTransaction;
-            _commandTimeout = commandTimeout;
-            //_schema = schema;
-
-            WhereConditionModels = whereCollection.GetConditions();
-            SetConditionModels = setCollection.GetConditions();
-            TableName = PostgresMapping.GetTableName<I>();
-            StoredProcedureName = PostgresMapping.GetProcedureName<I>(QueryType.Update, TableName, WhereConditionModels, SetConditionModels);
-
-            foreach (ConditionModel condition in WhereConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition, "_w");
-            }
-
-            foreach (ConditionModel condition in SetConditionModels)
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition, "_s");
-            }
+            _queryOptions = queryOptions;
+            _logger = logger;
         }
 
-        public PostgresUpdateQuery(I item, DBAutomator dBAutomator, string connectionString, int slowQueryWarningInSeconds, IDbTransaction? dbTransaction = null, int? commandTimeout = null)
-        {
-            List<PropertyInfo> props = typeof(I).GetProperties().Where(prop => Attribute.IsDefined(prop, typeof(IdentityAttribute))).ToList();
+        public async Task<IEnumerable<C>> UpdateAsync(Expression<Func<C, object>> setCollection, Expression<Func<C, object>>? whereCollection = null)
+        {         
+            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
-            if (props.Count() == 0)
+            List<ExpressionModel<C>> setExpressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? setBinaryExpression = GetBinaryExpression(setCollection);
+
+            GetExpressions(setBinaryExpression, setExpressions, registeredClass, "s_");
+
+            List<ExpressionModel<C>> whereExpressions = new List<ExpressionModel<C>>();
+
+            BinaryExpression? whereBinaryExpression = GetBinaryExpression(whereCollection);
+
+            GetExpressions(whereBinaryExpression, whereExpressions, registeredClass);
+
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(setExpressions)}";
+
+            if (whereCollection != null)
             {
-                throw new Exception($"DBAutomator Error: The item {typeof(I).Name} does not contain an identity attribute.");
+                sql = $"{sql} WHERE {whereCollection.GetWhereClause(whereExpressions)}";
             }
 
-            List<ConditionModel> conditionModels = new List<ConditionModel>();
+            sql = $"{sql} RETURNING *;";
 
-            _dBAutomator = dBAutomator;
-            _connectionString = connectionString;
-            _slowQueryWarningInSeconds = slowQueryWarningInSeconds;
-            _dbTransaction = dbTransaction;
-            _commandTimeout = commandTimeout;
-            //_schema = schema;
-            _item = item;
+            _logger.LogTrace(sql);
 
-            foreach (var prop in props)
-            {
-                ConditionModel conditionModel = new ConditionModel
-                {
-                    Name = PostgresMapping.GetColumnName<I>(prop.Name),
-                    OperatorName = "Equal",
-                    Value = prop.GetValue(item)
-                };
+            DynamicParameters p = GetDynamicParametersFromExpression(setExpressions);
 
-                WhereConditionModels.Add(conditionModel);
-            }
+            GetDynamicParametersFromExpression(whereExpressions, p);
 
-            foreach (PropertyInfo prop in typeof(I).GetProperties())
-            {
-                if (!prop.IsStorable()) { continue; }
+            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
-                ConditionModel conditionModel = new ConditionModel
-                {
-                    Name = PostgresMapping.GetColumnName<I>(prop.Name),
-                    OperatorName = "Equal",
-                    Value = prop.GetValue(item)
-                };
+            connection.Open();
 
-                SetConditionModels.Add(conditionModel);
-            }
+            var stopWatch = StopWatchStart();
 
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
 
-            TableName = PostgresMapping.GetTableName<I>();
-            StoredProcedureName = PostgresMapping.GetProcedureName<I>(QueryType.Update, TableName, WhereConditionModels, SetConditionModels);
+            StopWatchEnd(stopWatch, "UpdateAsync");
 
-            foreach (ConditionModel condition in WhereConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition, "_w");
-            }
+            connection.Close();
 
-            foreach (ConditionModel condition in SetConditionModels)
-            {
-                PostgresMapping.AddParameter(_dynamicParameters, condition, "_s");
-            }
+            return result;
         }
 
-
-        public async Task<List<I>> UpdateAsync()
+        public async Task<C> UpdateAsync(C item)
         {
-            using NpgsqlConnection connection = new NpgsqlConnection(_connectionString);
-
-            await connection.OpenAsync();
-
-            Stopwatch stopwatch = StopWatchStart();
-
-            IEnumerable<C> obj;
-
-            try
+            if (item == null)
             {
-                if (_item != null && _item is IDBObject itemOnUpdate)
+                throw new NullReferenceException("The item cannot be null.");
+            }
+
+            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+
+            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
+
+            var keys = registeredClass.RegisteredProperties.Where(p => p.IsKey);
+
+            if (keys.Count() == 0)
+            {
+                throw new Exception("The registered class does not have a primary key attribute.");
+            }
+
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {GetWhereClause(item, registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement).ToList(), ",")} WHERE";
+
+            foreach(var key in keys)
+            {
+                sql = $"{sql} \"{key.ColumnName}\" =";
+
+                if (key.PropertyType == typeof(ulong))
                 {
-                    await itemOnUpdate.OnUpdate(_dBAutomator);
-                }
-
-                obj = await connection.QueryAsync<C>(StoredProcedureName, _dynamicParameters, _dbTransaction, _commandTimeout, CommandType.StoredProcedure);
-
-                var result = obj.Cast<I>().ToList();
-
-                if (_item != null && _item is IDBObject itemOnUpdated)
-                {
-                    itemOnUpdated.IsDirty = false;
-
-                    itemOnUpdated.IsNewRecord = false;
-
-                    await itemOnUpdated.OnUpdated(_dBAutomator);
+                    sql = $"{sql} {Convert.ToInt64(item.GetType().GetProperty(key.PropertyName).GetValue(item, null))}";
                 }
                 else
                 {
-                    foreach (I item in result)
-                    {
-                        if (item is IDBObject dBObject)
-                        {
-                            dBObject.IsDirty = false;
-
-                            dBObject.IsNewRecord = false;
-
-                            await dBObject.OnUpdated(_dBAutomator);
-                        }
-                    }
+                    sql = $"{sql} {item.GetType().GetProperty(key.PropertyName).GetValue(item, null)}";
                 }
 
-                return result;
+                sql = $"{sql} AND";
             }
-            catch (PostgresException e)
+
+            sql = sql[0..^3];
+
+            sql = $"{sql} RETURNING *;";
+
+            _logger.LogTrace(sql);
+
+            if (item is IDBObject dBObject)
             {
-                if (e.SqlState == "42883")  //function does not exist
-                {
-                    CreateUpdate(connection);
-
-                    obj = await connection.QueryAsync<C>(StoredProcedureName, _dynamicParameters, _dbTransaction, _commandTimeout, CommandType.StoredProcedure);
-
-                    var result = obj.Cast<I>().ToList();
-
-                    if (_item != null && _item is IDBObject itemOnUpdated)
-                    {
-                        await itemOnUpdated.OnUpdated(_dBAutomator);
-                    }
-                    else
-                    {
-                        foreach (I item in result)
-                        {
-                            if (item is IDBObject dBObject)
-                            {
-                                dBObject.IsDirty = false;
-
-                                dBObject.IsNewRecord = false;
-
-                                await dBObject.OnUpdated(_dBAutomator);
-                            }
-                        }
-                    }
-
-                    return result;
-                }
-
-                _dBAutomator.Logger?.LogWarning(LoggingEvents.ErrorExecutingQuery, "{source}: {method} {message}", _source, "UpdateAsync", e.Message);
-                
-                throw;
+                await dBObject.OnUpdateAsync(_dBAutomator);
             }
 
-            finally
+            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
+
+            connection.Open();
+
+            var stopWatch = StopWatchStart();
+
+            var result = await connection.QuerySingleAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+
+            StopWatchEnd(stopWatch, "UpdateAsync");
+
+            connection.Close();
+
+            if (item is IDBObject dBObject1)
             {
-                StopWatchEnd(stopwatch, "InsertAsync()");
-
-                connection.Close();
+                await dBObject1.OnUpdatedAsync(_dBAutomator);
             }
+
+            return result;
         }
-
-
-
-
-
-
 
         private Stopwatch StopWatchStart()
         {
@@ -228,118 +150,10 @@ namespace DBAutomatorLibrary
         private void StopWatchEnd(Stopwatch stopwatch, string methodName)
         {
             stopwatch.Stop();
-            if (stopwatch.Elapsed.TotalSeconds > _slowQueryWarningInSeconds)
+            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning)
             {
                 _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
             }
         }
-
-
-
-
-
-
-
-
-
-
-
-        private void CreateUpdate(NpgsqlConnection connection)
-        {
-            _dBAutomator.Logger?.LogDebug(LoggingEvents.ModifyingDatabase, "{source}: {method}", _source, "CreateUpdate");
-
-            using NpgsqlCommand command = new NpgsqlCommand
-            {
-                Connection = connection
-            };
-
-            string commandText = "";
-
-            commandText = $"{commandText}CREATE OR REPLACE FUNCTION {StoredProcedureName}(";
-
-
-            foreach (ConditionModel condition in WhereConditionModels ?? Enumerable.Empty<ConditionModel>())
-            {
-                if (condition.Value == null)
-                {
-                    throw new ArgumentNullException();
-                }
-                
-                commandText = $"{commandText}_w{condition.Name.ToLower()} {condition.Value.MapToPostgreSql()}\n, ";
-            }
-
-            foreach (ConditionModel condition in SetConditionModels)
-            {
-                if (condition.Value == null)
-                {
-                    throw new ArgumentNullException();
-                }
-
-                commandText = $"{commandText}_s{condition.Name.ToLower()} {condition.Value.MapToPostgreSql()}\n, ";
-            }
-
-            if (commandText.Right(2) == ", ")
-            {
-                commandText = commandText.Left(commandText.Length - 2);
-            }
-
-            commandText = $"{commandText})\n";
-
-            commandText = $"{commandText}RETURNS TABLE(\n";
-
-            foreach (PropertyInfo property in typeof(I).GetProperties())
-            {
-                if (property.IsStorable())
-                {
-                    commandText = $"{commandText}{PostgresMapping.GetColumnName<I>(property.Name)} {property.MapToPostgreSql()}\n, ";
-                }
-            }
-
-            commandText = commandText.Substring(0, commandText.Length - 2);
-
-            commandText = $"{commandText})\n";
-
-            commandText = $"{commandText}LANGUAGE SQL\n";
-
-            commandText = $"{commandText}AS $$\n\n";
-
-            commandText = $"{commandText}UPDATE \"{TableName}\"\n";
-
-            commandText = $"{commandText}SET \n";
-
-            foreach (ConditionModel condition in SetConditionModels)
-            {
-                commandText = $"{commandText}\"{PostgresMapping.GetColumnName<I>(condition.Name)}\" = _s{condition.Name.ToLower()}\n, ";
-            }
-
-            commandText = commandText.Left(commandText.Length - 2);
-
-            commandText = $"{commandText}\n";
-
-            if (WhereConditionModels != null)
-            {
-                commandText = $"{commandText}WHERE\n";
-
-                foreach (ConditionModel condition in WhereConditionModels ?? Enumerable.Empty<ConditionModel>())
-                {
-                    commandText = $"{commandText}\"{TableName}\".\"{PostgresMapping.GetColumnName<I>(condition.Name)}\" {condition.Operator} _w{condition.Name.ToLower()} AND ";
-                }
-                commandText = commandText.Substring(0, commandText.Length - 5);
-
-            }
-
-            commandText = $"{commandText}\n";
-
-            commandText = $"{commandText}RETURNING *\n";
-
-            commandText = $"{commandText}\n$$\n";
-
-            command.CommandText = commandText;
-
-            command.ExecuteNonQuery();
-
-        }
-
-
     }
 }

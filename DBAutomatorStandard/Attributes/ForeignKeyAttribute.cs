@@ -2,9 +2,9 @@
 //using System.Collections.Generic;
 //using System.Text;
 //using static DBAutomatorLibrary.DBAutomator;
-//using static DBAutomatorStandard.Enums;
+//using static devhl.DBAutomator.Enums;
 
-//namespace DBAutomatorLibrary
+//namespace devhl.DBAutomatorLibrary
 //{
 //    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 

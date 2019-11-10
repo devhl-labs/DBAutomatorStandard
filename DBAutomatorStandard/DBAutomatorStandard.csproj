@@ -4,11 +4,25 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>8.0</LangVersion>
     <Nullable>enable</Nullable>
+    <RootNamespace>devhl.DBAutomator</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.1.0</Version>
+    <PackageId>DBAutomator</PackageId>
+    <Authors>devhl</Authors>
+    <Company>devhl</Company>
+    <Product>DBAutomator</Product>
+    <Description>Save and update objects to a database using only Linq.</Description>
+    <Copyright>2019</Copyright>
+    <PackageProjectUrl>https://github.com/devhl-labs/DBAutomator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/devhl-labs/DBAutomator</RepositoryUrl>
+    <PackageTags>DBAutomator database Linq db2linq database2linq databasetolinq devhl</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.4" />
     <PackageReference Include="Microsoft.Extensions.Logging?.Abstractions" Version="3.0.0" />
+    <PackageReference Include="EntityFramework" Version="6.3.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.0.0" />
     <PackageReference Include="Npgsql" Version="4.1.0-preview2" />
   </ItemGroup>
