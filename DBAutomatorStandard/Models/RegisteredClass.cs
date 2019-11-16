@@ -13,7 +13,7 @@ namespace devhl.DBAutomator
     {
         public readonly object SomeClass;
 
-        public readonly string TableName = string.Empty;
+        public string TableName { get; set; } = string.Empty;
 
         public List<RegisteredProperty> RegisteredProperties { get; set; } = new List<RegisteredProperty>();
 

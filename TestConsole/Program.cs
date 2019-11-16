@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Linq;
-using TestDatabaseLibrary;
-using static devhl.DBAutomator.Enums;
 using System.IO;
-using devhl.DBAutomator;
 using System.Text.Json;
+
+using devhl.DBAutomator;
+using static devhl.DBAutomator.Enums;
+
+using TestDatabaseLibrary;
 
 namespace TestConsole
 {

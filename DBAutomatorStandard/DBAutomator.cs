@@ -16,13 +16,13 @@ namespace devhl.DBAutomator
     {
         public event SlowQueryWarningEventHandler? OnSlowQueryDetected;
 
-        public ILogger? Logger { get; }
+        public ILogger? Logger { get; internal set; }
 
         private const string _source = nameof(DBAutomator);
 
         public readonly List<RegisteredClass> RegisteredClasses = new List<RegisteredClass>();
 
-        public QueryOptions QueryOptions { get; }
+        public QueryOptions QueryOptions { get; internal set; }
 
         public DBAutomator(QueryOptions queryOptions, ILogger? logger = null)
         {
@@ -31,13 +31,29 @@ namespace devhl.DBAutomator
             QueryOptions = queryOptions;
         }
 
-        public void Register(object someObject)
+#nullable disable
+        public DBAutomator()
+        {
+            
+        }
+#nullable enable
+
+        public void Initialize(QueryOptions queryOptions, ILogger? logger = null)
+        {
+            Logger = logger;
+
+            QueryOptions = queryOptions;
+        }
+
+        public RegisteredClass Register(object someObject)
         {
             try
             {
                 var registeredClass = new RegisteredClass(someObject);
 
                 RegisteredClasses.Add(registeredClass);
+
+                return registeredClass;
             }
             catch (Exception e)
             {
