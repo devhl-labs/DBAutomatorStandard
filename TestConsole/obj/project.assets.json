@@ -429,7 +429,7 @@
           }
         }
       },
-      "DBAutomator/0.1.0": {
+      "DBAutomator/0.2.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
@@ -449,7 +449,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "DBAutomator": "0.1.0",
+          "DBAutomator": "0.2.0",
           "EntityFramework": "6.3.0"
         },
         "compile": {
@@ -1804,7 +1804,7 @@
         "version.txt"
       ]
     },
-    "DBAutomator/0.1.0": {
+    "DBAutomator/0.2.0": {
       "type": "project",
       "path": "../DBAutomatorStandard/DBAutomatorStandard.csproj",
       "msbuildProject": "../DBAutomatorStandard/DBAutomatorStandard.csproj"
@@ -1817,7 +1817,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETCoreApp,Version=v3.0": [
-      "DBAutomator >= 0.1.0",
+      "DBAutomator >= 0.2.0",
       "TestDatabaseLibrary >= 1.0.0"
     ]
   },
