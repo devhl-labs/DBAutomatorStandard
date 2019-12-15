@@ -44,7 +44,7 @@ var p = await postgres.GetAsync(u => u.UserID == 2 || u.UserName == "changed aga
 The Register method returns a RegisteredClass object.  You may edit the TableName and ColumnName properties to point your class to the property database object.  You may also decorate your class with attributes.  This library uses five attributes from Entity Framework: Key, NotMapped, Table, Column, and DatabaseGenerated.  The option you provide to the DatabaseGenereated is not relevant.  The library will also work with views so you can easily get joins working.  
 
 ## IDBObject
-Your classes can optionally implement the IDBObject interface.  This will add call backs in your POCO when the library inserts, updates, deletes, or selects your object.
+Your classes can optionally implement the IDBObject interface.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
 ## Compatibility
 This library is tested with PostgreSQL but it may work with other databases as well.  The table definitions used while testing can be found in the UserModel, AddressModel, and UserAddressModel files.  The generated SQL is printed to the ILogger.Trace method.

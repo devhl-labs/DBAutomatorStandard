@@ -7,6 +7,10 @@ using System.Linq.Expressions;
 
 using Dapper;
 
+using MiaPlaza.ExpressionUtils;
+
+using static devhl.DBAutomator.Statics;
+using MiaPlaza.ExpressionUtils.Evaluating;
 
 namespace devhl.DBAutomator
 {
@@ -14,11 +18,6 @@ namespace devhl.DBAutomator
     {
         public static bool IsStorable(this PropertyInfo propertyInfo)
         {
-            //if (typeof(INotMapped).IsAssignableFrom(propertyInfo.GetType()))
-            //{
-            //    return false;
-            //}
-
             if (propertyInfo.GetCustomAttributes<NotMappedAttribute>(true).FirstOrDefault() is NotMappedAttribute notMappedAttribute)
             {
                 return false;
@@ -62,31 +61,92 @@ namespace devhl.DBAutomator
             return binaryExpression;
         }
 
-        public static string GetWhereClause<C>(this Expression<Func<C, object>>? e, List<ExpressionModel<C>> expressions)
+        public static Queue<string> GetOperator(string str)
         {
-            if (e == null)
-            {
-                return string.Empty;
-            }
+            Queue<string> result = new Queue<string>();
 
-            if (e.Body is UnaryExpression unaryExpression && unaryExpression.Operand is BinaryExpression binaryExpression)
+            for (int i = 0; i < str.Length; i++)
             {
-                string result = $"{binaryExpression.Left.ToString()} {binaryExpression.NodeType.GetMathSymbol()} {binaryExpression.Right.ToString()}";
-
-                if (expressions != null)
+                if (str.Length >= i + 10)
                 {
-                    foreach (var exp in expressions)
+                    if (str.Substring(i, ") OrElse (".Length) == ") OrElse (")
                     {
-                        result = result.Replace(exp.ToString(), exp.ToSqlString());
+                        result.Enqueue("OR");
                     }
                 }
 
-                result = result.Replace(") OrElse (", ") OR (").Replace(") AndAlso (", ") AND (");
-
-                return result;
+                if (str.Length >= i + 11)
+                {
+                    if (str.Substring(i, ") AndAlso (".Length) == ") AndAlso (")
+                    {
+                        result.Enqueue("AND");
+                    }
+                }
             }
 
-            return string.Empty;
+            return result;
+        }
+
+        public static string GetWhereClause<C>(this Expression<Func<C, object>> e, List<ExpressionModel<C>> expressions)
+        {
+            string result = string.Empty;
+
+            var operators = GetOperator(e.ToString());
+
+            foreach (var exp in expressions)
+            {
+                if (exp.Value != null && exp.Value.GetType() == typeof(string))
+                {
+                    result = $"{result} \"{exp.ColumnName}\" {exp.NodeType.GetMathSymbol().Replace("==", "=")} '{exp.Value}'";
+                }
+                else
+                {
+                    result = $"{result} \"{exp.ColumnName}\" {exp.NodeType.GetMathSymbol().Replace("==", "=")} {exp.Value}";
+                }                
+
+                if (operators.Count() > 0)
+                {
+                    result = $"{result} {operators.Dequeue()}";
+                }
+            }
+
+            result = result.Replace(") OrElse (", ") OR (").Replace(") AndAlso (", ") AND (");
+
+            return result;
+
+
+
+
+
+
+
+
+
+
+
+            //if (e == null)
+            //{
+            //    return string.Empty;
+            //}
+
+            //if (e.Body is UnaryExpression unaryExpression && unaryExpression.Operand is BinaryExpression binaryExpression)
+            //{
+            //    string result = $"{binaryExpression.Left.ToString()} {binaryExpression.NodeType.GetMathSymbol()} {binaryExpression.Right.ToString()}";
+
+            //    if (expressions != null)
+            //    {
+            //        foreach (var exp in expressions)
+            //        {
+            //            result = result.Replace(exp.ToString(), exp.ToSqlString());
+            //        }
+            //    }
+
+            //    result = result.Replace(") OrElse (", ") OR (").Replace(") AndAlso (", ") AND (");
+
+            //    return result;
+            //}
+
+            //return string.Empty;
         }
 
         public static string GetWhereClause<C>(C item, List<RegisteredProperty> registeredProperties, string delimiter = "AND")
@@ -134,17 +194,59 @@ namespace devhl.DBAutomator
 
             if (binaryExpression.Left is MemberExpression memberExpression)
             {
-                if (memberExpression.Expression is ParameterExpression thisExpression)
-                {
-                    expression.ParameterName = thisExpression.Name;
-                }
+                //if (memberExpression.Expression is ConstantExpression c)
+                //{
+                //    Type t = c.Value.GetType();
 
-                expression.PropertyName = memberExpression.Member.Name;
+                //    var x = t.InvokeMember(memberExpression.Member.Name, BindingFlags.GetField, null, c.Value, null);
+
+                //    expression.Value = x;
+                //}
+                //else
+                //{
+                    if (memberExpression.Expression is ParameterExpression thisExpression)
+                    {
+                        expression.ParameterName = thisExpression.Name;
+                    }
+
+                    expression.PropertyName = memberExpression.Member.Name;
+                //}
             }
 
             if (binaryExpression.Right is ConstantExpression constantExpression)
             {
                 expression.Value = constantExpression.Value;
+            }
+            else if (binaryExpression.Right is MethodCallExpression methodCallExpression)
+            {
+                var objectMember = Expression.Convert(methodCallExpression, typeof(object));
+
+                var getterLambda = Expression.Lambda<Func<object>>(objectMember);
+
+                expression.Value = getterLambda.Compile();
+            }
+            else if (binaryExpression.Right is MemberExpression memberExpression1)
+            {
+                if (memberExpression1.Expression is ConstantExpression c)
+                {
+                    //this works too!!!!!!!!!!!!!!!!!!!!!
+
+                    //Type t = c.Value.GetType();
+
+                    //var x = t.InvokeMember(memberExpression1.Member.Name, BindingFlags.GetField, null, c.Value, null);
+
+                    //expression.Value = x;
+
+                    ConstantExpression a = (ConstantExpression) PartialEvaluator.PartialEval(memberExpression1, ExpressionInterpreter.Instance);
+
+                    expression.Value = a.Value;
+                }
+                else
+                {
+                    ConstantExpression a = (ConstantExpression) PartialEvaluator.PartialEval(memberExpression1, ExpressionInterpreter.Instance);
+
+                    expression.Value =  a.Value;
+                }
             }
 
             if (expression.PropertyName != null)

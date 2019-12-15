@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using Npgsql;
 
-
 using static devhl.DBAutomator.PostgresMethods;
 
 namespace devhl.DBAutomator
@@ -28,7 +27,7 @@ namespace devhl.DBAutomator
         }
 
         public async Task<IEnumerable<C>> GetAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
-        {       
+        {
             RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
 
             List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
@@ -99,6 +98,13 @@ namespace devhl.DBAutomator
             //    connection.Close();
             //}
         }
+
+        //public async Task<C> GetFirstOrDefaultAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
+        //{
+        //    var result = await GetAsync(where, orderBy);
+
+        //    return result.FirstOrDefault();
+        //}
 
         private Stopwatch StopWatchStart()
         {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -16,13 +17,13 @@ namespace devhl.DBAutomator
     {
         public event SlowQueryWarningEventHandler? OnSlowQueryDetected;
 
-        public ILogger? Logger { get; internal set; }
+        public ILogger? Logger { get; set; }
 
         private const string _source = nameof(DBAutomator);
 
         public readonly List<RegisteredClass> RegisteredClasses = new List<RegisteredClass>();
 
-        public QueryOptions QueryOptions { get; internal set; }
+        public QueryOptions QueryOptions { get; set; }
 
         public DBAutomator(QueryOptions queryOptions, ILogger? logger = null)
         {
@@ -104,6 +105,21 @@ namespace devhl.DBAutomator
                 }
 
                 return await query.GetAsync(where, orderBy);
+            }
+            catch (Exception e)
+            {
+                throw new DbAutomatorException(e.Message, e);
+            }
+        }
+
+        public async Task<C> GetFirstOrDefaultAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)
+        {
+            try
+            {
+                var result = await GetAsync(where, orderBy, queryOptions);
+
+                return result.ToList().FirstOrDefault();               
+
             }
             catch (Exception e)
             {
