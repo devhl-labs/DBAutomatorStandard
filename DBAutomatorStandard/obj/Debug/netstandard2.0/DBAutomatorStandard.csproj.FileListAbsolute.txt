@@ -1,8 +1,0 @@
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\bin\Debug\netstandard2.0\DBAutomatorStandard.deps.json
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\bin\Debug\netstandard2.0\DBAutomatorStandard.dll
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\obj\Debug\netstandard2.0\DBAutomatorStandard.csprojAssemblyReference.cache
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\obj\Debug\netstandard2.0\DBAutomatorStandard.AssemblyInfoInputs.cache
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\obj\Debug\netstandard2.0\DBAutomatorStandard.AssemblyInfo.cs
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\bin\Debug\netstandard2.0\DBAutomatorStandard.pdb
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\obj\Debug\netstandard2.0\DBAutomatorStandard.dll
-E:\repos\DBAutomatorStandard\DBAutomatorStandard\obj\Debug\netstandard2.0\DBAutomatorStandard.pdb
