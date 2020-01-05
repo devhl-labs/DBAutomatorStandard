@@ -10,6 +10,7 @@ using Dapper;
 using Npgsql;
 
 using static devhl.DBAutomator.PostgresMethods;
+using devhl.DBAutomator.Interfaces;
 
 namespace devhl.DBAutomator
 {
@@ -65,46 +66,31 @@ namespace devhl.DBAutomator
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
 
             Stopwatch stopwatch = StopWatchStart();
 
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopwatch, "GetAsync()");
 
             foreach(var item in result)
             {
-                if (item is IDBObject dBObject)
+                if (item is IDBObject dbObjectLoaded)
                 {
-                    await dBObject.OnLoadedAsync(_dBAutomator);
+                    dbObjectLoaded.IsNew = false;
+
+                    dbObjectLoaded.IsDirty = false;
+                }
+
+                if (item is IDBEvent dbEventLoaded)
+                {
+                    await dbEventLoaded.OnLoadedAsync(_dBAutomator).ConfigureAwait(false);
                 }
             }
 
             return result;
-
-            //try
-            //{
-            //    C result = await connection.QueryFirstOrDefaultAsync<C>(StoredProcedureName, _dynamicParameters, _dbTransaction, _commandTimeout, CommandType.StoredProcedure);
-
-            //    await OnLoaded(result, _dBAutomator);
-
-            //    return result;
-            //}
-            //finally
-            //{
-            //    StopWatchEnd(stopwatch, "GetAsync()");
-
-            //    connection.Close();
-            //}
         }
-
-        //public async Task<C> GetFirstOrDefaultAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
-        //{
-        //    var result = await GetAsync(where, orderBy);
-
-        //    return result.FirstOrDefault();
-        //}
 
         private Stopwatch StopWatchStart()
         {

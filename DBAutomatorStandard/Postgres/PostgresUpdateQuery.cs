@@ -11,6 +11,7 @@ using Dapper;
 using Npgsql;
 
 using static devhl.DBAutomator.PostgresMethods;
+using devhl.DBAutomator.Interfaces;
 
 namespace devhl.DBAutomator
 {
@@ -64,7 +65,7 @@ namespace devhl.DBAutomator
 
             var stopWatch = StopWatchStart();
 
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopWatch, "UpdateAsync");
 
@@ -95,18 +96,18 @@ namespace devhl.DBAutomator
 
             foreach(var key in keys)
             {
-                sql = $"{sql} \"{key.ColumnName}\" =";
+                sql = $"{sql} \"{key.ColumnName}\" = '";
 
-                if (key.PropertyType == typeof(ulong))
+                if (key.PropertyType == typeof(ulong) || key.PropertyType == typeof(ulong?))
                 {
-                    sql = $"{sql} {Convert.ToInt64(item.GetType().GetProperty(key.PropertyName).GetValue(item, null))}";
+                    sql = $"{sql}{Convert.ToInt64(item.GetType().GetProperty(key.PropertyName).GetValue(item, null))}";
                 }
                 else
                 {
-                    sql = $"{sql} {item.GetType().GetProperty(key.PropertyName).GetValue(item, null)}";
+                    sql = $"{sql}{item.GetType().GetProperty(key.PropertyName).GetValue(item, null)}";
                 }
 
-                sql = $"{sql} AND";
+                sql = $"{sql}' AND";
             }
 
             sql = sql[0..^3];
@@ -115,9 +116,9 @@ namespace devhl.DBAutomator
 
             _logger.LogTrace(sql);
 
-            if (item is IDBObject dBObject)
+            if (item is IDBEvent dBObject)
             {
-                await dBObject.OnUpdateAsync(_dBAutomator);
+                await dBObject.OnUpdateAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
@@ -126,15 +127,22 @@ namespace devhl.DBAutomator
 
             var stopWatch = StopWatchStart();
 
-            var result = await connection.QuerySingleAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QuerySingleAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopWatch, "UpdateAsync");
 
             connection.Close();
 
-            if (item is IDBObject dBObject1)
+            if (item is IDBObject dbObjectUpdated)
             {
-                await dBObject1.OnUpdatedAsync(_dBAutomator);
+                dbObjectUpdated.IsNew = false;
+
+                dbObjectUpdated.IsDirty = false;
+            }
+
+            if (item is IDBEvent onUpdatedEvent)
+            {
+                await onUpdatedEvent.OnUpdatedAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             return result;

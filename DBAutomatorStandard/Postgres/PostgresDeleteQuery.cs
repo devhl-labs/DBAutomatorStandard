@@ -10,7 +10,7 @@ using static devhl.DBAutomator.PostgresMethods;
 
 using Dapper;
 using Npgsql;
-
+using devhl.DBAutomator.Interfaces;
 
 namespace devhl.DBAutomator
 {
@@ -42,24 +42,24 @@ namespace devhl.DBAutomator
 
             _logger.LogTrace(sql);
 
-            if (item is IDBObject dBObject)
+            if (item is IDBEvent dBObject)
             {
-                await dBObject.OnDeleteAsync(_dBAutomator);
+                await dBObject.OnDeleteAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
 
             Stopwatch stopwatch = StopWatchStart();
 
-            var result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopwatch, "GetAsync()");
 
-            if (item is IDBObject dBObject1)
+            if (item is IDBEvent dBObject1)
             {
-                await dBObject1.OnDeletedAsync(_dBAutomator);
+                await dBObject1.OnDeletedAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             return result;
@@ -90,11 +90,11 @@ namespace devhl.DBAutomator
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
-            await connection.OpenAsync();
+            await connection.OpenAsync().ConfigureAwait(false);
 
             Stopwatch stopwatch = StopWatchStart();
 
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopwatch, "GetAsync()");
 

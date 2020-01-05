@@ -47,6 +47,8 @@ namespace TestConsole
 
             await TestUsingComplexClosure();
 
+            Console.WriteLine("done");
+
             Console.ReadLine();
         }
 
@@ -95,6 +97,7 @@ namespace TestConsole
 
             var g = await Postgres.InsertAsync(newUser6);
         }
+
         private static async Task TestUsingConstants()
         {
             var a = await Postgres.GetAsync<UserModel>(u => u.UserName == "a");
@@ -108,7 +111,10 @@ namespace TestConsole
             var e = await Postgres.GetAsync<UserModel>(u => u.UserID > 3 || u.UserName == "b");
 
             var f = await Postgres.GetAsync<UserModel>(u => u.UserID > 4 && u.UserName == "e");
+
+            var g = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserName == "f" || u.UserType > UserType.User);
         }
+
         private static async Task TestUsingVariableClosure()
         {
             var a = "a";
@@ -125,6 +131,8 @@ namespace TestConsole
 
             ulong m = 4;
 
+            UserType userType = UserType.Admin;
+
             var e = await Postgres.GetAsync<UserModel>(u => u.UserName == b);
 
             var f = await Postgres.UpdateAsync<UserModel>(u => u.UserName == z, u => u.UserName == b);
@@ -136,6 +144,8 @@ namespace TestConsole
             var i = await Postgres.GetAsync<UserModel>(u => u.UserID > l || u.UserName == z);
 
             var j = await Postgres.GetAsync<UserModel>(u => u.UserID > m && u.UserName == d);
+
+            var n = await Postgres.GetAsync<UserModel>(u => u.UserID == k || u.UserName != "d" && u.UserType == userType);
         }
 
         private static async Task TestUsingComplexClosure()
@@ -157,6 +167,8 @@ namespace TestConsole
             var f = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID || u.UserName == h.UserName);
 
             var g = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID && u.UserName == i.UserName);
+
+            var j = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserName == i.UserName && u.UserType > UserType.User);
         }
     }
 }

@@ -7,6 +7,14 @@ using devhl.DBAutomator;
 
 namespace TestDatabaseLibrary
 {
+	public enum UserType
+	{
+		User,
+		Admin
+	}
+
+
+
 	[Table("User")]
 	public class UserModel : IDBObject
 	{
@@ -26,7 +34,7 @@ namespace TestDatabaseLibrary
 		[NotMapped]
 		public bool IsNewRecord { get; set; } = true;
 
-
+		public UserType UserType { get; set; } = UserType.User;
 
 
 

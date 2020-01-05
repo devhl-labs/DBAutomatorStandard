@@ -8,6 +8,7 @@ using Dapper;
 using Npgsql;
 
 using static devhl.DBAutomator.PostgresMethods;
+using devhl.DBAutomator.Interfaces;
 
 namespace devhl.DBAutomator
 {
@@ -57,9 +58,9 @@ namespace devhl.DBAutomator
 
             _logger.LogTrace(sql);
 
-            if (item is IDBObject dBObject)
+            if (item is IDBEvent dBObject)
             {
-                await dBObject.OnInsertAsync(_dBAutomator);
+                await dBObject.OnInsertAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
@@ -68,15 +69,22 @@ namespace devhl.DBAutomator
 
             var stopWatch = StopWatchStart();
 
-            var result = await connection.QueryFirstOrDefaultAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut);
+            var result = await connection.QueryFirstOrDefaultAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
             StopWatchEnd(stopWatch, "PostgresInsertQuery");
 
             connection.Close();
 
-            if (item is IDBObject dBObject1)
+            if (item is IDBObject onInsertedObject)
             {
-                await dBObject1.OnInsertAsync(_dBAutomator);
+                onInsertedObject.IsDirty = false;
+
+                onInsertedObject.IsNew = false;
+            }
+
+            if (item is IDBEvent onInsertedEvent)
+            {
+                await onInsertedEvent.OnInsertedAsync(_dBAutomator).ConfigureAwait(false);
             }
 
             return result;

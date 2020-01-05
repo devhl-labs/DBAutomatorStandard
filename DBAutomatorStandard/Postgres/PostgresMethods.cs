@@ -206,12 +206,34 @@ namespace devhl.DBAutomator
                 //{
                     if (memberExpression.Expression is ParameterExpression thisExpression)
                     {
-                        expression.ParameterName = thisExpression.Name;
+                        expression.ParameterName = thisExpression.Name; //u
                     }
 
-                    expression.PropertyName = memberExpression.Member.Name;
+                    expression.PropertyName = memberExpression.Member.Name; //userid
                 //}
             }
+            else if (binaryExpression.Left is ConstantExpression constantExpression2)
+            {
+                Console.WriteLine(constantExpression2.Value);
+            }
+            else if (binaryExpression.Left is UnaryExpression unaryExpression)
+            {
+                Console.WriteLine(unaryExpression.Operand);
+                Console.WriteLine(unaryExpression.Type);
+                Console.WriteLine(unaryExpression.NodeType);
+                
+                if (unaryExpression.Operand is MemberExpression memberExpression1)
+                {
+                    if (memberExpression1.Expression is ParameterExpression thisExpression2)
+                    {
+                        expression.ParameterName = thisExpression2.Name;
+                    }
+                    expression.PropertyName = memberExpression1.Member.Name;
+                }
+
+            }
+
+            var abc = binaryExpression.Left.GetType();
 
             if (binaryExpression.Right is ConstantExpression constantExpression)
             {
@@ -227,6 +249,10 @@ namespace devhl.DBAutomator
             }
             else if (binaryExpression.Right is MemberExpression memberExpression1)
             {
+                //ConstantExpression a = (ConstantExpression) PartialEvaluator.PartialEval(memberExpression1, ExpressionInterpreter.Instance);
+
+                //expression.Value = a.Value;
+
                 if (memberExpression1.Expression is ConstantExpression c)
                 {
                     //this works too!!!!!!!!!!!!!!!!!!!!!
@@ -245,8 +271,16 @@ namespace devhl.DBAutomator
                 {
                     ConstantExpression a = (ConstantExpression) PartialEvaluator.PartialEval(memberExpression1, ExpressionInterpreter.Instance);
 
-                    expression.Value =  a.Value;
+                    expression.Value = a.Value;
                 }
+            }
+            else
+            {
+                Expression a = PartialEvaluator.PartialEval(binaryExpression.Right, ExpressionInterpreter.Instance);
+
+                expression.Value = a.ToString(); // a.Value;
+
+                //expression.Value = Expression.Lambda(binaryExpression.Right).Compile().DynamicInvoke();
             }
 
             if (expression.PropertyName != null)
@@ -261,7 +295,7 @@ namespace devhl.DBAutomator
 
             foreach (var exp in expressions)
             {
-                if (exp.Value is ulong)
+                if (exp.Value is ulong || exp.Value is ulong?)
                 {
                     p.Add($"{exp.ParameterPrefix}{exp.ColumnName}", Convert.ToInt64(exp.Value));
                 }
@@ -289,7 +323,7 @@ namespace devhl.DBAutomator
                 {
                     p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item, null));
                 }
-                else if (property.PropertyType == typeof(ulong))
+                else if (property.PropertyType == typeof(ulong) || property.PropertyType == typeof(ulong?))
                 {
                     p.Add($"@{property.ColumnName}", Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item, null)));
                 }

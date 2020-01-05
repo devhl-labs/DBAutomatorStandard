@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using MiaPlaza.ExpressionUtils;
+using MiaPlaza.ExpressionUtils.Evaluating;
 using Microsoft.Extensions.Logging;
 
 using static devhl.DBAutomator.Enums;
@@ -84,13 +86,163 @@ namespace devhl.DBAutomator
             Logger?.LogWarning(LoggingEvents.SlowQuery, "{source}: Slow Query {methodName} took {seconds} seconds.", _source, methodName, (int)timeSpan.TotalSeconds);
         }
 
+        public void Test(Expression exp)
+        {
+            if (exp is BinaryExpression binaryExpression)
+            {
+                if (binaryExpression.Left is BinaryExpression leftBinary) Test(leftBinary);
 
+                if (binaryExpression.Right is BinaryExpression rightBinary) Test(rightBinary);
+
+                if (binaryExpression.Left is UnaryExpression leftUnary)
+                {
+                    Console.WriteLine(leftUnary.ToString());
+                }
+                else if (binaryExpression.Left is ConstantExpression constantLeft)
+                {
+                    ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantLeft, ExpressionInterpreter.Instance);
+
+                    Console.WriteLine(left);
+                }
+                else if (binaryExpression.Left is MemberExpression memberExpression)
+                {
+                    Console.WriteLine(memberExpression.ToString());
+                }
+                else
+                {
+                    var type = binaryExpression.Left.GetType();
+
+                    Console.WriteLine(binaryExpression.Left.ToString());
+                }
+            }
+
+
+
+            //if (exp is BinaryExpression binaryExpression && binaryExpression.Left is BinaryExpression leftBinary)
+            //{
+            //    Test(leftBinary);
+            //}
+            //else if (exp is BinaryExpression binaryExpression2 && binaryExpression.Left is BinaryExpression rightBinary)
+            //{
+            //    Test(unaryExpression);
+            //}
+            //else if ((exp is ConditionalExpression conditionalExpression))
+            //{
+            //    Test(conditionalExpression);
+            //}
+            //else
+            //{
+            //    BinaryExpression b = (BinaryExpression) exp;
+
+            //if (binaryExpression.Left is binaryExpressioninaryExpression e)
+            //{
+            //    Test(e);
+            //}
+            //else
+            //{
+                //if (binaryExpression.Left is UnaryExpression leftUnary)
+                //{
+                //    Console.WriteLine(leftUnary.ToString());
+                //}
+                //else if (binaryExpression.Left is ConstantExpression constantLeft)
+                //{
+                //    ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantLeft, ExpressionInterpreter.Instance);
+
+                //    Console.WriteLine(left);
+                //}
+                //else
+                //{
+                //    var type = binaryExpression.Left.GetType();
+
+                //    Console.WriteLine(binaryExpression.Left.ToString());
+                //}
+
+            //}
+
+
+            //if (binaryExpression.Right is binaryExpressioninaryExpression rightbinaryExpressioninary)
+            //{
+            //    Test(rightbinaryExpressioninary);
+            //}
+            //else
+            //{
+            //    if (binaryExpression.Right is ConstantExpression constantRight)
+            //    {
+            //        ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantRight, ExpressionInterpreter.Instance);
+
+            //        Console.WriteLine(left);
+            //    }
+            //    else
+            //    {
+            //        if (binaryExpression.Right is ConstantExpression constantExp)
+            //        {
+            //            Console.WriteLine(binaryExpression.Right.ToString());
+            //        }
+            //        else
+            //        {
+            //            Expression pe = PartialEvaluator.PartialEval(binaryExpression.Right, ExpressionInterpreter.Instance);
+            //        }
+            //    }
+            //}
+        //}
+        }
 
 
         public async Task<IEnumerable<C>> GetAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)
         {
             try
             {
+                try
+                {
+                    if (where != null)
+                    {
+                        Expression<Func<C, object>> exp = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
+                        where = exp;
+
+                        //if (exp is UnaryExpression un)
+                        //{
+                        //var unaryExpression = (UnaryExpression) where.Body;
+
+                        //var binaryExpression = (BinaryExpression) unaryExpression.Operand;
+
+                        //Test(binaryExpression);
+                        //}
+
+                        //Expression<Func<C, object>> test4 = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
+                        //Console.WriteLine(test4.ToString());
+
+                        //var test5 = test4.GetType();
+
+                        //UnaryExpression? unaryExpression;
+
+                        //BinaryExpression? binaryExpression = null;
+
+                        //if (test4 != null)
+                        //{
+                        //    unaryExpression = (UnaryExpression) test4.Body;
+
+                        //    binaryExpression = (BinaryExpression) unaryExpression.Operand;
+
+                        //    var test6 = binaryExpression.Right.GetType();
+
+                        //    //var test7 = binaryExpression.Left.get
+                        //}
+
+                        //var unaryExpression = (UnaryExpression) where.Body;
+
+                        //var binaryExpression = (BinaryExpression) unaryExpression.Operand;
+
+                        //Test(binaryExpression);
+                    }
+                }
+                catch (Exception)
+                {
+
+                    //throw;
+                }
+
                 queryOptions ??= QueryOptions;
 
                 ISelectQuery<C> query;
@@ -104,7 +256,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.GetAsync(where, orderBy);
+                return await query.GetAsync(where, orderBy).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -116,7 +268,7 @@ namespace devhl.DBAutomator
         {
             try
             {
-                var result = await GetAsync(where, orderBy, queryOptions);
+                var result = await GetAsync(where, orderBy, queryOptions).ConfigureAwait(false);
 
                 return result.ToList().FirstOrDefault();               
 
@@ -149,7 +301,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.InsertAsync(item);
+                return await query.InsertAsync(item).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -174,7 +326,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.DeleteAsync(where);
+                return await query.DeleteAsync(where).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -199,7 +351,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.DeleteAsync(item);
+                return await query.DeleteAsync(item).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -224,7 +376,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.UpdateAsync(set, where);
+                return await query.UpdateAsync(set, where).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -249,7 +401,7 @@ namespace devhl.DBAutomator
                     throw new NotImplementedException();
                 }
 
-                return await query.UpdateAsync(item);
+                return await query.UpdateAsync(item).ConfigureAwait(false);
             }
             catch (Exception e)
             {
