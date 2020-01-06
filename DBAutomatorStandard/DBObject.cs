@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace devhl.DBAutomator
 {
-    public class DBObject : IDBObject
+    public abstract class DBObject : IDBObject
     {
         /// <summary>
         /// Defaults to true
@@ -21,16 +21,6 @@ namespace devhl.DBAutomator
         [NotMapped]
         public virtual bool IsDirty { get; set; } = false;
 
-        public virtual async Task Save(DBAutomator dBAutomator)
-        {
-            if (IsNew)
-            {
-                await dBAutomator.InsertAsync(this);
-            }
-            else if (IsDirty)
-            {
-                await dBAutomator.UpdateAsync(this);
-            }
-        }
+        public abstract Task Save(DBAutomator dBAutomator);
     }
 }

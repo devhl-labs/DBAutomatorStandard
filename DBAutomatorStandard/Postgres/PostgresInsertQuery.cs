@@ -32,7 +32,7 @@ namespace devhl.DBAutomator
                 throw new ArgumentNullException(nameof(item), "The item cannot be null");
             }
 
-            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == item.GetType());
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
 

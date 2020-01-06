@@ -29,7 +29,7 @@ namespace devhl.DBAutomator
 
         public async Task<IEnumerable<C>> GetAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
         {
-            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
 

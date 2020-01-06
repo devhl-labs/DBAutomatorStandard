@@ -9,7 +9,7 @@ namespace devhl.DBAutomator
     {
         private readonly DBAutomator _dBAutomator;
 
-        private readonly RegisteredClass _registeredClass;
+        private readonly RegisteredClass<C> _registeredClass;
 
 
         private readonly List<(string, OrderBy)> _order = new List<(string, OrderBy)>();
@@ -18,7 +18,7 @@ namespace devhl.DBAutomator
         {
             _dBAutomator = dBAutomator;
 
-            _registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+            _registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r.GetType() == typeof(C));
 
             foreach(var order in orderBy)
             {

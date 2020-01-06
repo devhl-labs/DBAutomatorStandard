@@ -23,7 +23,7 @@ namespace devhl.DBAutomator
 
         private const string _source = nameof(DBAutomator);
 
-        public readonly List<RegisteredClass> RegisteredClasses = new List<RegisteredClass>();
+        public readonly List<object> RegisteredClasses = new List<object>();
 
         public QueryOptions QueryOptions { get; set; }
 
@@ -37,8 +37,9 @@ namespace devhl.DBAutomator
 #nullable disable
         public DBAutomator()
         {
-            
+
         }
+
 #nullable enable
 
         public void Initialize(QueryOptions queryOptions, ILogger? logger = null)
@@ -48,11 +49,11 @@ namespace devhl.DBAutomator
             QueryOptions = queryOptions;
         }
 
-        public RegisteredClass Register(object someObject)
+        public RegisteredClass<T> Register<T>()
         {
             try
             {
-                var registeredClass = new RegisteredClass(someObject);
+                var registeredClass = new RegisteredClass<T>();
 
                 RegisteredClasses.Add(registeredClass);
 
@@ -62,21 +63,18 @@ namespace devhl.DBAutomator
             {
                 throw new DbAutomatorException(e.Message, e);
             }
+
+
         }
 
-        //public void Register<C>()
-        //{
-        //    try
-        //    {
-        //        var registeredClass = new RegisteredClass<C>();
+        public RegisteredClass<T> Register<T>(string tableName)
+        {
+            var item = Register<T>();
 
-        //        RegisteredClasses.Add(registeredClass);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        throw new DbAutomatorException(e.Message, e);
-        //    }
-        //}
+            item.TableName = tableName;
+
+            return item;            
+        }
 
 
         internal void SlowQueryDetected(string methodName, TimeSpan timeSpan)
@@ -187,61 +185,11 @@ namespace devhl.DBAutomator
         //}
         }
 
-
         public async Task<IEnumerable<C>> GetAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)
         {
             try
             {
-                try
-                {
-                    if (where != null)
-                    {
-                        Expression<Func<C, object>> exp = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
-
-                        where = exp;
-
-                        //if (exp is UnaryExpression un)
-                        //{
-                        //var unaryExpression = (UnaryExpression) where.Body;
-
-                        //var binaryExpression = (BinaryExpression) unaryExpression.Operand;
-
-                        //Test(binaryExpression);
-                        //}
-
-                        //Expression<Func<C, object>> test4 = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
-
-                        //Console.WriteLine(test4.ToString());
-
-                        //var test5 = test4.GetType();
-
-                        //UnaryExpression? unaryExpression;
-
-                        //BinaryExpression? binaryExpression = null;
-
-                        //if (test4 != null)
-                        //{
-                        //    unaryExpression = (UnaryExpression) test4.Body;
-
-                        //    binaryExpression = (BinaryExpression) unaryExpression.Operand;
-
-                        //    var test6 = binaryExpression.Right.GetType();
-
-                        //    //var test7 = binaryExpression.Left.get
-                        //}
-
-                        //var unaryExpression = (UnaryExpression) where.Body;
-
-                        //var binaryExpression = (BinaryExpression) unaryExpression.Operand;
-
-                        //Test(binaryExpression);
-                    }
-                }
-                catch (Exception)
-                {
-
-                    //throw;
-                }
+                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
                 queryOptions ??= QueryOptions;
 
@@ -313,6 +261,8 @@ namespace devhl.DBAutomator
         {
             try
             {
+                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
                 queryOptions ??= QueryOptions;
 
                 IDeleteQuery<C> query;
@@ -363,6 +313,10 @@ namespace devhl.DBAutomator
         {
             try
             {
+                set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
+
+                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
                 queryOptions ??= QueryOptions;
 
                 IUpdateQuery<C> query;

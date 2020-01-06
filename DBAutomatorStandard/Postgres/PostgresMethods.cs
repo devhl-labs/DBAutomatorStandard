@@ -170,7 +170,7 @@ namespace devhl.DBAutomator
             return result;
         }
 
-        public static void GetExpressions<C>(BinaryExpression? binaryExpression, List<ExpressionModel<C>> expressions, RegisteredClass registeredClass, string parameterPrefix = "w_")
+        public static void GetExpressions<C>(BinaryExpression? binaryExpression, List<ExpressionModel<C>> expressions, RegisteredClass<C> registeredClass, string parameterPrefix = "w_")
         {
             if (binaryExpression == null)
             {
@@ -323,9 +323,22 @@ namespace devhl.DBAutomator
                 {
                     p.Add($"@{property.ColumnName}", item.GetType().GetProperty(property.PropertyName).GetValue(item, null));
                 }
-                else if (property.PropertyType == typeof(ulong) || property.PropertyType == typeof(ulong?))
+                else if (property.PropertyType == typeof(ulong))
                 {
                     p.Add($"@{property.ColumnName}", Convert.ToInt64(item.GetType().GetProperty(property.PropertyName).GetValue(item, null)));
+                }
+                else if (property.PropertyType == typeof(ulong?))
+                {
+                    ulong? id = (ulong?) item.GetType().GetProperty(property.PropertyName).GetValue(item, null);
+
+                    if (id == null)
+                    {
+                        p.Add($"@{property.ColumnName}", null);
+                    }
+                    else
+                    {
+                        p.Add($"@{property.ColumnName}", Convert.ToInt64(id));
+                    }                    
                 }
                 else
                 {

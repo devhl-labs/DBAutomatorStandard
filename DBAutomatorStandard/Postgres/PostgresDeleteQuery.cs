@@ -34,7 +34,7 @@ namespace devhl.DBAutomator
                 throw new NullReferenceException("The item cannot be null.");
             }
 
-            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
 
@@ -67,7 +67,7 @@ namespace devhl.DBAutomator
 
         public async Task<IEnumerable<C>> DeleteAsync(Expression<Func<C, object>>? where = null)
         {
-            RegisteredClass registeredClass = _dBAutomator.RegisteredClasses.First(r => r.SomeClass.GetType() == typeof(C));
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
 

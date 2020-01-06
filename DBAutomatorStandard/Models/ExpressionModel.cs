@@ -6,11 +6,11 @@ namespace devhl.DBAutomator
 {
     public class ExpressionModel<C>
     {
-        private readonly RegisteredClass _registeredClass;
+        private readonly RegisteredClass<C> _registeredClass;
 
         public string ParameterPrefix { get; }
 
-        public ExpressionModel(RegisteredClass registeredClass, string parameterPrefix = "w_")
+        public ExpressionModel(RegisteredClass<C> registeredClass, string parameterPrefix = "w_")
         {
             _registeredClass = registeredClass;
             ParameterPrefix = parameterPrefix;
