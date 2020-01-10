@@ -13,9 +13,9 @@ queryOptions.ConnectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorT
 
 DBAutomator postgres = new DBAutomator(queryOptions, logService);
 
-postgres.Register(new UserModel());
-postgres.Register(new AddressModel());
-postgres.Register(new UserAddressModel());
+postgres.Register<UserModel>();
+postgres.Register<AddressModel>();
+postgres.Register<UserAddressModel>();
 ```
  
 Now you can save and retrieve your objects using Linq.  
