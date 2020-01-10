@@ -10,15 +10,17 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using Npgsql;
 
-using static devhl.DBAutomator.PostgresMethods;
 using devhl.DBAutomator.Interfaces;
+using devhl.DBAutomator.Models;
 
 namespace devhl.DBAutomator
 {
     internal class PostgresUpdateQuery<C> : IUpdateQuery<C>
     {
         private readonly DBAutomator _dBAutomator;
+
         private readonly QueryOptions _queryOptions;
+
         private readonly ILogger? _logger;
 
         public PostgresUpdateQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
@@ -28,36 +30,36 @@ namespace devhl.DBAutomator
             _logger = logger;
         }
 
-        public async Task<IEnumerable<C>> UpdateAsync(Expression<Func<C, object>> setCollection, Expression<Func<C, object>>? whereCollection = null)
-        {         
+        public async Task<IEnumerable<C>> UpdateAsync(Expression<Func<C, object>> set, Expression<Func<C, object>>? where = null)
+        {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            List<ExpressionModel<C>> setExpressions = new List<ExpressionModel<C>>();
+            BinaryExpression? whereBinary = PostgresMethods.GetBinaryExpression(where);
 
-            BinaryExpression? setBinaryExpression = GetBinaryExpression(setCollection);
+            List<ExpressionPart>? whereExpressionParts = PostgresMethods.GetExpressionParts(whereBinary);
 
-            GetExpressions(setBinaryExpression, setExpressions, registeredClass, "s_");
+            BinaryExpression? setBinary = PostgresMethods.GetBinaryExpression(set);
 
-            List<ExpressionModel<C>> whereExpressions = new List<ExpressionModel<C>>();
+            List<ExpressionPart>? setExpressionParts = PostgresMethods.GetExpressionParts(setBinary);
 
-            BinaryExpression? whereBinaryExpression = GetBinaryExpression(whereCollection);
+            if (setExpressionParts == null) throw new DbAutomatorException("Unsupported expression", new ArgumentException());
 
-            GetExpressions(whereBinaryExpression, whereExpressions, registeredClass);
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(setExpressionParts, "s_")}";
 
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {setCollection.GetWhereClause(setExpressions)}";
-
-            if (whereCollection != null)
+            if (whereExpressionParts != null)
             {
-                sql = $"{sql} WHERE {whereCollection.GetWhereClause(whereExpressions)}";
+                sql = $"{sql} WHERE {PostgresMethods.ToColumnNameEqualsParameterName(whereExpressionParts, "w_")}";
             }
 
             sql = $"{sql} RETURNING *;";
 
             _logger.LogTrace(sql);
 
-            DynamicParameters p = GetDynamicParametersFromExpression(setExpressions);
+            DynamicParameters p = new DynamicParameters();
 
-            GetDynamicParametersFromExpression(whereExpressions, p);
+            PostgresMethods.AddParameters(p, registeredClass, whereExpressionParts);
+
+            PostgresMethods.AddParameters(p, registeredClass, setExpressionParts, "s_");
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 
@@ -76,43 +78,21 @@ namespace devhl.DBAutomator
 
         public async Task<C> UpdateAsync(C item)
         {
-            if (item == null)
-            {
-                throw new NullReferenceException("The item cannot be null.");
-            }
-
-            var a = typeof(C);
+            if (item == null) throw new NullReferenceException("The item cannot be null.");
 
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
+            if (registeredClass.RegisteredProperties.Count(p => !p.NotMapped && p.IsKey) == 0) throw new Exception("The registered class does not have a primary key attribute.");
 
-            var keys = registeredClass.RegisteredProperties.Where(p => p.IsKey);
+            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE ";
 
-            if (keys.Count() == 0)
-            {
-                throw new Exception("The registered class does not have a primary key attribute.");
-            }
+            sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))} ";
 
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {GetWhereClause(item, registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement).ToList(), ",")} WHERE";
+            DynamicParameters p = new DynamicParameters();
 
-            foreach(var key in keys)
-            {
-                sql = $"{sql} \"{key.ColumnName}\" = '";
+            PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
 
-                if (key.PropertyType == typeof(ulong) || key.PropertyType == typeof(ulong?))
-                {
-                    sql = $"{sql}{Convert.ToInt64(item.GetType().GetProperty(key.PropertyName).GetValue(item, null))}";
-                }
-                else
-                {
-                    sql = $"{sql}{item.GetType().GetProperty(key.PropertyName).GetValue(item, null)}";
-                }
-
-                sql = $"{sql}' AND";
-            }
-
-            sql = sql[0..^3];
+            PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
 
             sql = $"{sql} RETURNING *;";
 

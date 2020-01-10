@@ -1,6 +1,4 @@
 ﻿using devhl.DBAutomator;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TestDatabaseLibrary
 {
@@ -8,7 +6,7 @@ namespace TestDatabaseLibrary
 	public class AddressModel
 	{
 		[Key]
-		[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+		[AutoIncrement]
 		public ulong AddressID { get; set; }
 		
 		public ulong UserID { get; set; }

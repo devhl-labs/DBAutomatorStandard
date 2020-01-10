@@ -30,11 +30,11 @@ namespace TestConsole
 
             Postgres = new DBAutomator(queryOptions, logService);
 
-            Postgres.Register(new UserModel());
+            Postgres.Register<UserModel>();
 
-            Postgres.Register(new AddressModel());
+            Postgres.Register<AddressModel>();
 
-            Postgres.Register(new UserAddressModel());
+            Postgres.Register<UserAddressModel>();
 
             //delete all rows
             var a = await Postgres.DeleteAsync<UserModel>();
@@ -57,32 +57,32 @@ namespace TestConsole
             UserModel newUser1 = new UserModel
             {
                 UserID = 1,
-                UserName = "a"
+                UserNames = "a"
             };
             UserModel newUser2 = new UserModel
             {
                 UserID = 2,
-                UserName = "b"
+                UserNames = "b"
             };
             UserModel newUser3 = new UserModel
             {
                 UserID = 3,
-                UserName = "c"
+                UserNames = "c"
             };
             UserModel newUser4 = new UserModel
             {
                 UserID = 4,
-                UserName = "d"
+                UserNames = "d"
             };
             UserModel newUser5 = new UserModel
             {
                 UserID = 5,
-                UserName = "e"
+                UserNames = "e"
             };
             UserModel newUser6 = new UserModel
             {
                 UserID = 6,
-                UserName = "f"
+                UserNames = "f"
             };
 
             var b = await Postgres.InsertAsync(newUser1);
@@ -100,19 +100,19 @@ namespace TestConsole
 
         private static async Task TestUsingConstants()
         {
-            var a = await Postgres.GetAsync<UserModel>(u => u.UserName == "a");
+            var a = await Postgres.GetAsync<UserModel>(u => u.UserNames == "a");
 
-            var b = await Postgres.UpdateAsync<UserModel>(u => u.UserName == "z", u => u.UserName == "a");
+            var b = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == "z", u => u.UserNames == "a");
 
-            var c = await Postgres.DeleteAsync<UserModel>(u => u.UserName == "z");
+            var c = await Postgres.DeleteAsync<UserModel>(u => u.UserNames == "z");
 
             var d = await Postgres.GetAsync<UserModel>(u => u.UserID > 1);
 
-            var e = await Postgres.GetAsync<UserModel>(u => u.UserID > 3 || u.UserName == "b");
+            var e = await Postgres.GetAsync<UserModel>(u => u.UserID > 3 || u.UserNames == "b");
 
-            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > 4 && u.UserName == "e");
+            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > 4 && u.UserNames == "e");
 
-            var g = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserName == "f" || u.UserType > UserType.User);
+            var g = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserNames == "f" || u.UserType > UserType.User);
         }
 
         private static async Task TestUsingVariableClosure()
@@ -133,42 +133,42 @@ namespace TestConsole
 
             UserType userType = UserType.Admin;
 
-            var e = await Postgres.GetAsync<UserModel>(u => u.UserName == b);
+            var e = await Postgres.GetAsync<UserModel>(u => u.UserNames == b);
 
-            var f = await Postgres.UpdateAsync<UserModel>(u => u.UserName == z, u => u.UserName == b);
+            var f = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == z, u => u.UserNames == b);
 
-            var g = await Postgres.DeleteAsync<UserModel>(u => u.UserName == b);
+            var g = await Postgres.DeleteAsync<UserModel>(u => u.UserNames == b);
 
             var h = await Postgres.GetAsync<UserModel>(u => u.UserID > k);
 
-            var i = await Postgres.GetAsync<UserModel>(u => u.UserID > l || u.UserName == z);
+            var i = await Postgres.GetAsync<UserModel>(u => u.UserID > l || u.UserNames == z);
 
-            var j = await Postgres.GetAsync<UserModel>(u => u.UserID > m && u.UserName == d);
+            var j = await Postgres.GetAsync<UserModel>(u => u.UserID > m && u.UserNames == d);
 
-            var n = await Postgres.GetAsync<UserModel>(u => u.UserID == k || u.UserName != "d" && u.UserType == userType);
+            var n = await Postgres.GetAsync<UserModel>(u => u.UserID == k || u.UserNames != "d" && u.UserType == userType);
         }
 
         private static async Task TestUsingComplexClosure()
         {
-            var a = new UserModel { UserName = "test", UserID = 3 };
+            var a = new UserModel { UserNames = "test", UserID = 2 };
 
-            var h = new UserModel { UserName = "z" };
+            var h = new UserModel { UserNames = "z" };
 
-            var i = new UserModel { UserName = "f" };
+            var i = new UserModel { UserNames = "f" };
 
-            var b = await Postgres.GetAsync<UserModel>(u => u.UserID == a.UserID);
+            var b = await Postgres.GetFirstOrDefaultAsync<UserModel>(u => u.UserID == a.UserID);
 
-            var c = await Postgres.UpdateAsync<UserModel>(u => u.UserName == a.UserName, u => u.UserID == a.UserID);
+            var c = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == a.UserNames, u => u.UserID == a.UserID);
 
             var d = await Postgres.DeleteAsync<UserModel>(u => u.UserID == a.UserID);
 
             var e = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID);
 
-            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID || u.UserName == h.UserName);
+            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID || u.UserNames == h.UserNames);
 
-            var g = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID && u.UserName == i.UserName);
+            var g = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID && u.UserNames == i.UserNames);
 
-            var j = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserName == i.UserName && u.UserType > UserType.User);
+            var j = await Postgres.GetAsync<UserModel>(u => (u.UserID == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User);
         }
     }
 }

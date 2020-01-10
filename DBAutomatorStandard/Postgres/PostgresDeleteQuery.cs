@@ -6,18 +6,19 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-using static devhl.DBAutomator.PostgresMethods;
-
 using Dapper;
 using Npgsql;
 using devhl.DBAutomator.Interfaces;
+using devhl.DBAutomator.Models;
 
 namespace devhl.DBAutomator
 {
     internal class PostgresDeleteQuery <C> : IDeleteQuery<C>
     {
         private readonly DBAutomator _dBAutomator;
+
         private readonly QueryOptions _queryOptions;
+
         private readonly ILogger? _logger;
 
         public PostgresDeleteQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
@@ -29,16 +30,26 @@ namespace devhl.DBAutomator
 
         public async Task<int> DeleteAsync(C item)
         {
-            if (item == null)
-            {
-                throw new NullReferenceException("The item cannot be null.");
-            }
+            if (item == null) throw new NullReferenceException("The item cannot be null.");
 
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
+            DynamicParameters p = new DynamicParameters();
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE {GetWhereClause(item, registeredClass.RegisteredProperties)};";
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE ";
+
+            if (registeredClass.RegisteredProperties.Any(p => p.IsKey))
+            {
+                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+
+                PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
+            }
+            else
+            {
+                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
+
+                PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement));
+            }
 
             _logger.LogTrace(sql);
 
@@ -69,24 +80,28 @@ namespace devhl.DBAutomator
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            List<ExpressionModel<C>> expressions = new List<ExpressionModel<C>>();
+            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
 
-            BinaryExpression? binaryExpression = GetBinaryExpression(where);
+            List<ExpressionPart>? expressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
 
-            GetExpressions(binaryExpression, expressions, registeredClass);
+            DynamicParameters p = new DynamicParameters();
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\"";
+            string sql = $"DELETE FROM \"{registeredClass.TableName}\" ";
 
             if (where != null)
             {
-                sql = $"{sql} WHERE {where.GetWhereClause(expressions)}";
+                if (expressionParts == null) throw new DbAutomatorException("Unsupported expression", new ArgumentException());
+
+                sql = $"{sql}WHERE ";
+
+                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(expressionParts)} ";
+
+                PostgresMethods.AddParameters(p, registeredClass, expressionParts);
             }
 
             sql = $"{sql} RETURNING *;";
 
             _logger.LogTrace(sql);
-
-            DynamicParameters p = GetDynamicParametersFromExpression(expressions);
 
             using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
 

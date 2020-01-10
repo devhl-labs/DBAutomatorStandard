@@ -13,6 +13,7 @@ namespace devhl.DBAutomator
         public ExpressionModel(RegisteredClass<C> registeredClass, string parameterPrefix = "w_")
         {
             _registeredClass = registeredClass;
+
             ParameterPrefix = parameterPrefix;
         }
 

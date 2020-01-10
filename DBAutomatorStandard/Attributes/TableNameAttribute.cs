@@ -1,18 +1,18 @@
-﻿//using System;
+﻿using System;
 
-//namespace devhl.DBAutomator
-//{
-//    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+namespace devhl.DBAutomator
+{
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 
-//    public class TableNameAttribute : Attribute
-//    {
-//        public string TableName { get; }
+    public class TableAttribute : Attribute
+    {
+        public string Name { get; }
 
-//        public TableNameAttribute(string tableName)
-//        {
-//            TableName = tableName;
-//        }
+        public TableAttribute(string name)
+        {
+            Name = name;
+        }
 
 
-//    }
-//}
+    }
+}

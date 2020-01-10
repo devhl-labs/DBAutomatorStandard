@@ -25,24 +25,9 @@ namespace devhl.DBAutomator
 
         public readonly List<object> RegisteredClasses = new List<object>();
 
-        public QueryOptions QueryOptions { get; set; }
+        public QueryOptions QueryOptions { get; set; } = new QueryOptions();
 
         public DBAutomator(QueryOptions queryOptions, ILogger? logger = null)
-        {
-            Logger = logger;
-
-            QueryOptions = queryOptions;
-        }
-
-#nullable disable
-        public DBAutomator()
-        {
-
-        }
-
-#nullable enable
-
-        public void Initialize(QueryOptions queryOptions, ILogger? logger = null)
         {
             Logger = logger;
 
@@ -76,113 +61,11 @@ namespace devhl.DBAutomator
             return item;            
         }
 
-
         internal void SlowQueryDetected(string methodName, TimeSpan timeSpan)
         {
             OnSlowQueryDetected?.Invoke(methodName, timeSpan);
 
             Logger?.LogWarning(LoggingEvents.SlowQuery, "{source}: Slow Query {methodName} took {seconds} seconds.", _source, methodName, (int)timeSpan.TotalSeconds);
-        }
-
-        public void Test(Expression exp)
-        {
-            if (exp is BinaryExpression binaryExpression)
-            {
-                if (binaryExpression.Left is BinaryExpression leftBinary) Test(leftBinary);
-
-                if (binaryExpression.Right is BinaryExpression rightBinary) Test(rightBinary);
-
-                if (binaryExpression.Left is UnaryExpression leftUnary)
-                {
-                    Console.WriteLine(leftUnary.ToString());
-                }
-                else if (binaryExpression.Left is ConstantExpression constantLeft)
-                {
-                    ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantLeft, ExpressionInterpreter.Instance);
-
-                    Console.WriteLine(left);
-                }
-                else if (binaryExpression.Left is MemberExpression memberExpression)
-                {
-                    Console.WriteLine(memberExpression.ToString());
-                }
-                else
-                {
-                    var type = binaryExpression.Left.GetType();
-
-                    Console.WriteLine(binaryExpression.Left.ToString());
-                }
-            }
-
-
-
-            //if (exp is BinaryExpression binaryExpression && binaryExpression.Left is BinaryExpression leftBinary)
-            //{
-            //    Test(leftBinary);
-            //}
-            //else if (exp is BinaryExpression binaryExpression2 && binaryExpression.Left is BinaryExpression rightBinary)
-            //{
-            //    Test(unaryExpression);
-            //}
-            //else if ((exp is ConditionalExpression conditionalExpression))
-            //{
-            //    Test(conditionalExpression);
-            //}
-            //else
-            //{
-            //    BinaryExpression b = (BinaryExpression) exp;
-
-            //if (binaryExpression.Left is binaryExpressioninaryExpression e)
-            //{
-            //    Test(e);
-            //}
-            //else
-            //{
-                //if (binaryExpression.Left is UnaryExpression leftUnary)
-                //{
-                //    Console.WriteLine(leftUnary.ToString());
-                //}
-                //else if (binaryExpression.Left is ConstantExpression constantLeft)
-                //{
-                //    ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantLeft, ExpressionInterpreter.Instance);
-
-                //    Console.WriteLine(left);
-                //}
-                //else
-                //{
-                //    var type = binaryExpression.Left.GetType();
-
-                //    Console.WriteLine(binaryExpression.Left.ToString());
-                //}
-
-            //}
-
-
-            //if (binaryExpression.Right is binaryExpressioninaryExpression rightbinaryExpressioninary)
-            //{
-            //    Test(rightbinaryExpressioninary);
-            //}
-            //else
-            //{
-            //    if (binaryExpression.Right is ConstantExpression constantRight)
-            //    {
-            //        ConstantExpression left = (ConstantExpression) PartialEvaluator.PartialEval(constantRight, ExpressionInterpreter.Instance);
-
-            //        Console.WriteLine(left);
-            //    }
-            //    else
-            //    {
-            //        if (binaryExpression.Right is ConstantExpression constantExp)
-            //        {
-            //            Console.WriteLine(binaryExpression.Right.ToString());
-            //        }
-            //        else
-            //        {
-            //            Expression pe = PartialEvaluator.PartialEval(binaryExpression.Right, ExpressionInterpreter.Instance);
-            //        }
-            //    }
-            //}
-        //}
         }
 
         public async Task<IEnumerable<C>> GetAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)

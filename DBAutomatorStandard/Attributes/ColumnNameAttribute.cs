@@ -1,19 +1,19 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
-//namespace devhl.DBAutomator
-//{
-//    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-//    public class ColumnNameAttribute : Attribute
-//    {
-//        public readonly string ColumnName;
+namespace devhl.DBAutomator
+{
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    public class ColumnAttribute : Attribute
+    {
+        public readonly string Name;
 
-//        public ColumnNameAttribute(string columnName)
-//        {
-//            ColumnName = columnName;
-//        }
+        public ColumnAttribute(string name)
+        {
+            Name = name;
+        }
 
 
-//    }
-//}
+    }
+}

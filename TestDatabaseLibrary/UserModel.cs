@@ -1,7 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using devhl.DBAutomator.Interfaces;
 
 using devhl.DBAutomator;
 
@@ -16,7 +15,7 @@ namespace TestDatabaseLibrary
 
 
 	[Table("User")]
-	public class UserModel : IDBObject
+	public class UserModel : IDBEvent
 	{
 		private const string _source = nameof(UserModel);
 
@@ -24,9 +23,9 @@ namespace TestDatabaseLibrary
 		public ulong UserID { get; set; }
 
 		[Column("UserNames")]
-		public string UserName { get; set; }
+		public string UserNames { get; set; }
 
-		public NotMappedClass NotMappedClass { get; set; }
+		public NotMappedClass NotMappedClass { get; set; } //todo figure this out
 
 		[NotMapped]
 		public string NotMappedProperty { get; set; }

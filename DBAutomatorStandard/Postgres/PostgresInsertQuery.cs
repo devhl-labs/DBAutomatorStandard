@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Dapper;
 using Npgsql;
 
-using static devhl.DBAutomator.PostgresMethods;
 using devhl.DBAutomator.Interfaces;
 
 namespace devhl.DBAutomator
@@ -27,30 +26,23 @@ namespace devhl.DBAutomator
 
         public async Task<C> InsertAsync(C item)
         {
-            if (item == null)
-            {
-                throw new ArgumentNullException(nameof(item), "The item cannot be null");
-            }
+            if (item == null) throw new ArgumentNullException(nameof(item), "The item cannot be null");
 
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            DynamicParameters p = GetDynamicParameters(item, registeredClass.RegisteredProperties);
+            DynamicParameters p = new DynamicParameters();
+
+            PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement));
 
             string sql = $"INSERT INTO \"{registeredClass.TableName}\" (";
 
-            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement))
-            {
-                sql = $"{sql}\"{property.ColumnName}\", ";
-            }
+            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
 
             sql = sql[0..^2];
 
             sql = $"{sql}) VALUES (";
 
-            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.IsAutoIncrement))
-            {
-                sql = $"{sql}@{property.ColumnName}, ";
-            }
+            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
 
             sql = sql[0..^2];
 

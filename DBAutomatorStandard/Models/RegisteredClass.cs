@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
 
 using Dapper;
 using System.Linq.Expressions;
@@ -26,29 +24,30 @@ namespace devhl.DBAutomator
 
             foreach (PropertyInfo property in typeof(T).GetProperties())
             {
-                if (property.IsStorable())
+                RegisteredProperty registeredProperty = new RegisteredProperty
                 {
-                    RegisteredProperty registeredProperty = new RegisteredProperty
-                    {
-                        Property = property,
+                    Property = property,
 
-                        ColumnName = GetColumnName(property),
+                    ColumnName = GetColumnName(property),
 
-                        IsKey = IsKey(property),
+                    IsKey = IsKey(property),
 
-                        IsAutoIncrement = IsAutoIncrement(property),
+                    IsAutoIncrement = IsAutoIncrement(property),
 
-                        PropertyName = $"{property.Name}",
+                    PropertyName = $"{property.Name}",
 
-                        PropertyType = property.PropertyType
-                    };
+                    PropertyType = property.PropertyType,
 
-                    RegisteredProperties.Add(registeredProperty);
+                    //todo this no longer keeps ignored properties out of the collection, will break on next run
 
-                    if (registeredProperty.PropertyName != registeredProperty.ColumnName)
-                    {
-                        columnMaps.Add(registeredProperty.ColumnName, registeredProperty.PropertyName);
-                    }
+                    NotMapped = !property.IsStorable()
+                };
+
+                RegisteredProperties.Add(registeredProperty);
+
+                if (registeredProperty.PropertyName != registeredProperty.ColumnName)
+                {
+                    columnMaps.Add(registeredProperty.ColumnName, registeredProperty.PropertyName);
                 }
             }
 
@@ -81,7 +80,7 @@ namespace devhl.DBAutomator
             return result;
         }
 
-        public RegisteredClass<T> Ignore(Expression<Func<T, object>> ignore)
+        public RegisteredClass<T> NotMapped(Expression<Func<T, object>> ignore)
         {
             string paramater = ignore.Parameters.First().Name;
 
@@ -89,7 +88,9 @@ namespace devhl.DBAutomator
 
             string propertyName = ignore.Body.ToString()[start..];
 
-            RegisteredProperties.Remove(RegisteredProperties.First(p => p.PropertyName == propertyName));
+            RegisteredProperties.First(p => p.PropertyName == propertyName).NotMapped = true;
+
+            RegisteredProperties.Remove(RegisteredProperties.First(p => p.PropertyName == propertyName)); //todo remove this line
 
             return this;
         }
@@ -157,7 +158,7 @@ namespace devhl.DBAutomator
 
         private bool IsAutoIncrement(PropertyInfo property)
         {
-            if (Attribute.IsDefined(property, typeof(DatabaseGeneratedAttribute)))
+            if (Attribute.IsDefined(property, typeof(AutoIncrementAttribute)))
             {
                 return true;
             }
