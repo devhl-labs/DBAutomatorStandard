@@ -24,11 +24,11 @@ Now you can save and retrieve your objects using Linq.
 var a = await postgres.Delete<UserModel>().QueryAsync();
 
 //insert a new row
-var b = await postgres.Insert(newUser1).QuerySingleOrDefault();
+var b = await postgres.Insert(newUser1).QuerySingleOrDefaultAsync();
 
 //update an existing row
 newUser1.UserName = "changed";
-var h = await postgres.Update(newUser1).QuerySingleOrDefault();
+var h = await postgres.Update(newUser1).QuerySingleOrDefaultAsync();
 
 //update all matching rows
 var i = await postgres.Update<UserModel>().Where(u => u.UserName == "changed again", u => u.UserName == "changed").QueryAsync();
