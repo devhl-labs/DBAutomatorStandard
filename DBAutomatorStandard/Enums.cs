@@ -6,19 +6,6 @@
         {
             PostgreSQL
         }
-
-        public enum JoinType
-        {
-            inner
-            , left
-            , right
-        }
-
-        public enum OrderBy
-        {
-            ASC,
-            DESC
-        }
     }
 
 }

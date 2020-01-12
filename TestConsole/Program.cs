@@ -8,6 +8,7 @@ using devhl.DBAutomator;
 using static devhl.DBAutomator.Enums;
 
 using TestDatabaseLibrary;
+using devhl.DBAutomator.Interfaces;
 
 namespace TestConsole
 {
@@ -17,7 +18,7 @@ namespace TestConsole
 
         public static async Task Main()
         {
-            LogService logService = new LogService();
+            ILogger logService = new LogService();
 
             string password = File.ReadAllText(@"E:\Desktop\password.txt");
 
@@ -37,7 +38,7 @@ namespace TestConsole
             Postgres.Register<UserAddressModel>();
 
             //delete all rows
-            var a = await Postgres.DeleteAsync<UserModel>();
+            var a = await Postgres.Delete<UserModel>().QueryAsync();
 
             await InsertNewRows();
 
@@ -85,40 +86,38 @@ namespace TestConsole
                 UserNames = "f"
             };
 
-            var b = await Postgres.InsertAsync(newUser1);
+            var b = await Postgres.Insert(newUser1).QueryFirstOrDefaultAsync();
 
-            var c = await Postgres.InsertAsync(newUser2);
+            var c = await Postgres.Insert(newUser2).QueryFirstOrDefaultAsync();
 
-            var d = await Postgres.InsertAsync(newUser3);
+            var d = await Postgres.Insert(newUser3).QueryFirstOrDefaultAsync();
 
-            var e = await Postgres.InsertAsync(newUser4);
+            var e = await Postgres.Insert(newUser4).QueryFirstOrDefaultAsync();
 
-            var f = await Postgres.InsertAsync(newUser5);
+            var f = await Postgres.Insert(newUser5).QueryFirstOrDefaultAsync();
 
-            var g = await Postgres.InsertAsync(newUser6);
+            var g = await Postgres.Insert(newUser6).QueryFirstOrDefaultAsync();
         }
 
         private static async Task TestUsingConstants()
         {
-            var a = await Postgres.GetAsync<UserModel>(u => u.UserNames == "a");
+            var a = await Postgres.Select<UserModel>().Where(u => u.UserNames == "a").QueryAsync();
 
-            var b = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == "z", u => u.UserNames == "a");
+            var b = await Postgres.Update<UserModel>().Where(u => u.UserNames == "z").Set(u => u.UserNames == "a").QueryFirstOrDefaultAsync();
 
-            var c = await Postgres.DeleteAsync<UserModel>(u => u.UserNames == "z");
+            var c = await Postgres.Delete<UserModel>().Where(u => u.UserNames == "z").QueryAsync();
 
-            var d = await Postgres.GetAsync<UserModel>(u => u.UserID > 1);
+            var d = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 1).QueryAsync();
 
-            var e = await Postgres.GetAsync<UserModel>(u => u.UserID > 3 || u.UserNames == "b");
+            var e = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 3 || u.UserNames == "b").QueryAsync();
 
-            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > 4 && u.UserNames == "e");
+            var f = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 4 && u.UserNames == "e").QueryAsync();
 
-            var g = await Postgres.GetAsync<UserModel>(u => u.UserID == 1 && u.UserNames == "f" || u.UserType > UserType.User);
+            var g = await Postgres.Select<UserModel>().Where(u => u.UserID.Value == 1 && u.UserNames == "f" || u.UserType > UserType.User).QueryAsync();
         }
 
         private static async Task TestUsingVariableClosure()
         {
-            var a = "a";
-
             var b = "b";
 
             var z = "z";
@@ -133,19 +132,20 @@ namespace TestConsole
 
             UserType userType = UserType.Admin;
 
-            var e = await Postgres.GetAsync<UserModel>(u => u.UserNames == b);
+            var e = await Postgres.Select<UserModel>().Where(u => u.UserNames == b).QueryAsync();
 
-            var f = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == z, u => u.UserNames == b);
+            var f = await Postgres.Update<UserModel>().Set(u => u.UserNames == z).Where(u => u.UserNames == b).QueryFirstOrDefaultAsync();
 
-            var g = await Postgres.DeleteAsync<UserModel>(u => u.UserNames == b);
+            var g = await Postgres.Delete<UserModel>().Where(u => u.UserNames == b).QueryAsync();
 
-            var h = await Postgres.GetAsync<UserModel>(u => u.UserID > k);
+            var h = await Postgres.Select<UserModel>().Where(u => u.UserID > k).QueryAsync();
 
-            var i = await Postgres.GetAsync<UserModel>(u => u.UserID > l || u.UserNames == z);
+            var i = await Postgres.Select<UserModel>().Where(u => u.UserID > l || u.UserNames == z).QueryAsync();
 
-            var j = await Postgres.GetAsync<UserModel>(u => u.UserID > m && u.UserNames == d);
+            var j = await Postgres.Select<UserModel>().Where(u => u.UserID > m && u.UserNames == d).QueryAsync();
 
-            var n = await Postgres.GetAsync<UserModel>(u => u.UserID == k || u.UserNames != "d" && u.UserType == userType);
+            var n = await Postgres.Select<UserModel>().Where(u => u.UserID == k || u.UserNames != "d" && u.UserType == userType).QueryAsync();
+
         }
 
         private static async Task TestUsingComplexClosure()
@@ -156,19 +156,19 @@ namespace TestConsole
 
             var i = new UserModel { UserNames = "f" };
 
-            var b = await Postgres.GetFirstOrDefaultAsync<UserModel>(u => u.UserID == a.UserID);
+            var b = await Postgres.Select<UserModel>().Where(u => u.UserID.Value == a.UserID).QueryFirstOrDefaultAsync();
 
-            var c = await Postgres.UpdateAsync<UserModel>(u => u.UserNames == a.UserNames, u => u.UserID == a.UserID);
+            var c = await Postgres.Update<UserModel>().Set(u => u.UserNames == a.UserNames).Where(u => u.UserID == a.UserID).QueryFirstOrDefaultAsync();
 
-            var d = await Postgres.DeleteAsync<UserModel>(u => u.UserID == a.UserID);
+            var d = await Postgres.Delete<UserModel>().Where(u => u.UserID.Value == a.UserID).QueryAsync();
 
-            var e = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID);
+            var e = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID).QueryAsync();
 
-            var f = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID || u.UserNames == h.UserNames);
+            var f = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID || u.UserNames == h.UserNames).QueryAsync();
 
-            var g = await Postgres.GetAsync<UserModel>(u => u.UserID > a.UserID && u.UserNames == i.UserNames);
+            var g = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID && u.UserNames == i.UserNames).QueryAsync();
 
-            var j = await Postgres.GetAsync<UserModel>(u => (u.UserID == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User);
+            var j = await Postgres.Select<UserModel>().Where(u => (u.UserID.Value == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User).QueryAsync();
         }
     }
 }

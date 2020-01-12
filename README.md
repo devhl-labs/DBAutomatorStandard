@@ -21,30 +21,30 @@ postgres.Register<UserAddressModel>();
 Now you can save and retrieve your objects using Linq.  
 ```csharp
 //delete all rows in the table
-var a = await postgres.DeleteAsync<UserModel>();
+var a = await postgres.Delete<UserModel>().QueryAsync();
 
 //insert a new row
-var b = await postgres.InsertAsync(newUser1);
+var b = await postgres.Insert(newUser1).QuerySingleOrDefault();
 
 //update an existing row
 newUser1.UserName = "changed";
-var h = await postgres.UpdateAsync(newUser1);
+var h = await postgres.Update(newUser1).QuerySingleOrDefault();
 
 //update all matching rows
-var i = await postgres.UpdateAsync<UserModel>(u => u.UserName == "changed again", u => u.UserName == "changed");
+var i = await postgres.Update<UserModel>().Where(u => u.UserName == "changed again", u => u.UserName == "changed").QueryAsync();
 
 //get the required rows
-var j = await postgres.GetAsync<UserModel>(u => u.UserID > 2);
-var n = await postgres.GetAsync<UserModel>(u => u.UserID == 2);
-var o = await postgres.GetAsync<UserModel>(u => u.UserID == 2 || u.UserName == "changed again");
-var p = await postgres.GetAsync(u => u.UserID == 2 || u.UserName == "changed again", orderBy);
+var j = await postgres.Select<UserModel>().Where(u => u.UserID > 2).QueryAsync();
+var n = await postgres.Select<UserModel>().Where(u => u.UserID == 2).QueryAsync();
+var o = await postgres.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "changed again").QueryAsync();
+var p = await postgres.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "changed again").OrderBy(u => u.UserID).QueryAsync();
 ```
 
 ## Configuring Your Classes
-The Register method returns a RegisteredClass object.  You may edit the TableName and ColumnName properties to point your class to the property database object.  You may also decorate your class with attributes.  This library uses five attributes from Entity Framework: Key, NotMapped, Table, Column, and DatabaseGenerated.  The option you provide to the DatabaseGenereated is not relevant.  The library will also work with views so you can easily get joins working.  
+The Register method returns a RegisteredClass object.  You may edit the TableName and ColumnName properties to point your class to the property database object.  You may also decorate your class with attributes.  This library uses five attributes: Key, NotMapped, TableName, ColumnName, and AutoIncrement.  The library will also work with views so you can easily get joins working.  
 
-## IDBObject
-Your classes can optionally implement the IDBObject interface.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
+## Callbacks
+Your classes can optionally implement the IDBObject or IDBEvent interfaces, or inherit the DBObject class.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
 ## Compatibility
-This library is tested with PostgreSQL but it may work with other databases as well.  The table definitions used while testing can be found in the UserModel, AddressModel, and UserAddressModel files.  The generated SQL is printed to the ILogger.Trace method.
+This library is designed to work with PostgreSQL.

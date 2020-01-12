@@ -38,8 +38,6 @@ namespace devhl.DBAutomator
 
                     PropertyType = property.PropertyType,
 
-                    //todo this no longer keeps ignored properties out of the collection, will break on next run
-
                     NotMapped = !property.IsStorable()
                 };
 
@@ -89,8 +87,6 @@ namespace devhl.DBAutomator
             string propertyName = ignore.Body.ToString()[start..];
 
             RegisteredProperties.First(p => p.PropertyName == propertyName).NotMapped = true;
-
-            RegisteredProperties.Remove(RegisteredProperties.First(p => p.PropertyName == propertyName)); //todo remove this line
 
             return this;
         }

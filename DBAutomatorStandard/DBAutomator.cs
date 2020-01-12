@@ -1,19 +1,16 @@
-﻿using System;
+﻿using devhl.DBAutomator.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
-using MiaPlaza.ExpressionUtils;
-using MiaPlaza.ExpressionUtils.Evaluating;
-using Microsoft.Extensions.Logging;
-
-using static devhl.DBAutomator.Enums;
 
 namespace devhl.DBAutomator
 {
     public delegate void IsAvailableChangedEventHandler(bool isAvailable);
 
+
     public delegate void SlowQueryWarningEventHandler(string methodName, TimeSpan timeSpan);
+
 
     public class DBAutomator
     {
@@ -21,7 +18,9 @@ namespace devhl.DBAutomator
 
         public ILogger? Logger { get; set; }
 
+
         private const string _source = nameof(DBAutomator);
+
 
         public readonly List<object> RegisteredClasses = new List<object>();
 
@@ -34,11 +33,11 @@ namespace devhl.DBAutomator
             QueryOptions = queryOptions;
         }
 
-        public RegisteredClass<T> Register<T>()
+        public RegisteredClass<C> Register<C>() where C : class
         {
             try
             {
-                var registeredClass = new RegisteredClass<T>();
+                var registeredClass = new RegisteredClass<C>();
 
                 RegisteredClasses.Add(registeredClass);
 
@@ -52,198 +51,57 @@ namespace devhl.DBAutomator
 
         }
 
-        public RegisteredClass<T> Register<T>(string tableName)
+        public RegisteredClass<C> Register<C>(string tableName) where C : class
         {
-            var item = Register<T>();
+            var item = Register<C>();
 
             item.TableName = tableName;
 
             return item;            
         }
 
-        internal void SlowQueryDetected(string methodName, TimeSpan timeSpan)
-        {
-            OnSlowQueryDetected?.Invoke(methodName, timeSpan);
+        internal void SlowQueryDetected(string sql, TimeSpan timeSpan) => OnSlowQueryDetected?.Invoke(sql, timeSpan);
 
-            Logger?.LogWarning(LoggingEvents.SlowQuery, "{source}: Slow Query {methodName} took {seconds} seconds.", _source, methodName, (int)timeSpan.TotalSeconds);
+        public Select<C> Select<C>(Expression<Func<C, object>>? select = null) where C : class
+        {
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
+
+            return new Select<C>(select, registeredClass, this, QueryOptions, Logger);
         }
 
-        public async Task<IEnumerable<C>> GetAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)
+        public Delete<C> Delete<C>() where C : class
         {
-            try
-            {
-                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-                queryOptions ??= QueryOptions;
-
-                ISelectQuery<C> query;
-
-                if (queryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresSelectQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.GetAsync(where, orderBy).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
+            return new Delete<C>(registeredClass, this, QueryOptions, Logger);
         }
 
-        public async Task<C> GetFirstOrDefaultAsync<C>(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null, QueryOptions? queryOptions = null)
+        public Delete<C> Delete<C>(C item) where C : class
         {
-            try
-            {
-                var result = await GetAsync(where, orderBy, queryOptions).ConfigureAwait(false);
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-                return result.ToList().FirstOrDefault();               
-
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
+            return new Delete<C>(item, registeredClass, this, QueryOptions, Logger);
         }
 
-        public async Task<C> InsertAsync<C>(C item, QueryOptions? queryOptions = null)
+        public Insert<C> Insert<C>(C item) where C : class
         {
-            try
-            {
-                if (item == null)
-                {
-                    throw new NullReferenceException("The item cannot be null.");
-                }
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-                queryOptions ??= QueryOptions;
-
-                IInsertQuery<C> query;
-
-                if (queryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresInsertQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.InsertAsync(item).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
+            return new Insert<C>(item, registeredClass, this, QueryOptions, Logger);
         }
 
-        public async Task<IEnumerable<C>> DeleteAsync<C>(Expression<Func<C, object>>? where = null, QueryOptions? queryOptions = null)
+        public Update<C> Update<C>(C item) where C : class
         {
-            try
-            {
-                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-                queryOptions ??= QueryOptions;
-
-                IDeleteQuery<C> query;
-
-                if (queryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresDeleteQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.DeleteAsync(where).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
+            return new Update<C>(item, registeredClass, this, QueryOptions, Logger);
         }
 
-        public async Task<int> DeleteAsync<C>(C item, QueryOptions? queryOptions = null)
+        public Update<C> Update<C>() where C : class
         {
-            try
-            {
-                queryOptions ??= QueryOptions;
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-                IDeleteQuery<C> query;
-
-                if (QueryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresDeleteQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.DeleteAsync(item).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
-        }
-
-        public async Task<IEnumerable<C>> UpdateAsync<C>(Expression<Func<C, object>> set, Expression<Func<C, object>>? where = null, QueryOptions? queryOptions = null)
-        {
-            try
-            {
-                set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
-
-                if (where != null) where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
-
-                queryOptions ??= QueryOptions;
-
-                IUpdateQuery<C> query;
-
-                if (queryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresUpdateQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.UpdateAsync(set, where).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
-        }
-
-        public async Task<C> UpdateAsync<C>(C item, QueryOptions? queryOptions = null)
-        {
-            try
-            {
-                queryOptions ??= QueryOptions;
-
-                IUpdateQuery<C> query;
-
-                if (queryOptions.DataStore == DataStore.PostgreSQL)
-                {
-                    query = new PostgresUpdateQuery<C>(this, queryOptions, Logger);
-                }
-                else
-                {
-                    throw new NotImplementedException();
-                }
-
-                return await query.UpdateAsync(item).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                throw new DbAutomatorException(e.Message, e);
-            }
+            return new Update<C>(registeredClass, this, QueryOptions, Logger);
         }
     }
 }

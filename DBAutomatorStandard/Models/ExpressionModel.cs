@@ -52,7 +52,7 @@ namespace devhl.DBAutomator
                 ExpressionType.LessThanOrEqual => "<=",
                 
 
-                _ => throw new ArgumentException("Invalid enum value", nameof(NodeType))
+                _ => throw new DbAutomatorException("Invalid enum value", new ArgumentException("Invalid enum value", nameof(NodeType)))
             };
 
         public string NodeTypeExpressionString() =>
@@ -65,7 +65,7 @@ namespace devhl.DBAutomator
         ExpressionType.LessThanOrEqual => "<=",
 
 
-        _ => throw new ArgumentException("Invalid enum value", nameof(NodeType))
+        _ => throw new DbAutomatorException("Invalid enum value", new ArgumentException("Invalid enum value", nameof(NodeType)))
     };
 
         public override string ToString()

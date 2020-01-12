@@ -4,132 +4,120 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 using Dapper;
 using Npgsql;
 using devhl.DBAutomator.Interfaces;
 using devhl.DBAutomator.Models;
+using MiaPlaza.ExpressionUtils;
+using MiaPlaza.ExpressionUtils.Evaluating;
 
-namespace devhl.DBAutomator
+namespace devhl.DBAutomator 
 {
-    internal class PostgresDeleteQuery <C> : IDeleteQuery<C>
+    public class Delete<C> : BasePostgresQuery<C> where C : class
     {
-        private readonly DBAutomator _dBAutomator;
+        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
 
-        private readonly QueryOptions _queryOptions;
+        private readonly C? _item = null;
 
-        private readonly ILogger? _logger;
-
-        public PostgresDeleteQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
+
             _queryOptions = queryOptions;
+
             _logger = logger;
+
+            _registeredClass = registeredClass;
         }
 
-        public async Task<int> DeleteAsync(C item)
+        public Delete<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
         {
-            if (item == null) throw new NullReferenceException("The item cannot be null.");
+            _queryOptions = queryOptions;
 
-            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
+            _logger = logger;
 
-            DynamicParameters p = new DynamicParameters();
+            return this;
+        }
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\" WHERE ";
+        internal Delete(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        {
+            _dBAutomator = dBAutomator;
 
-            if (registeredClass.RegisteredProperties.Any(p => p.IsKey))
+            _queryOptions = queryOptions;
+
+            _logger = logger;
+
+            _registeredClass = registeredClass;
+
+            _item = item ?? throw new DbAutomatorException("Item must not be null.", new ArgumentException());
+
+            if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
-
-                PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
+                PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
             }
             else
             {
-                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
-
-                PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement));
+                PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
             }
 
-            _logger.LogTrace(sql);
-
-            if (item is IDBEvent dBObject)
-            {
-                await dBObject.OnDeleteAsync(_dBAutomator).ConfigureAwait(false);
-            }
-
-            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            await connection.OpenAsync().ConfigureAwait(false);
-
-            Stopwatch stopwatch = StopWatchStart();
-
-            var result = await connection.ExecuteAsync(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
-
-            StopWatchEnd(stopwatch, "GetAsync()");
-
-            if (item is IDBEvent dBObject1)
-            {
-                await dBObject1.OnDeletedAsync(_dBAutomator).ConfigureAwait(false);
-            }
-
-            return result;
         }
 
-        public async Task<IEnumerable<C>> DeleteAsync(Expression<Func<C, object>>? where = null)
+        public Delete<C> Where(Expression<Func<C, object>>? where)
         {
-            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
+            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
+            BinaryExpression binaryExpression = PostgresMethods.GetBinaryExpression(where);
 
-            List<ExpressionPart>? expressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
 
-            DynamicParameters p = new DynamicParameters();
+            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
-            string sql = $"DELETE FROM \"{registeredClass.TableName}\" ";
+            return this;
+        }
 
-            if (where != null)
+        public override string ToString()
+        {
+            if (_item == null)
             {
-                if (expressionParts == null) throw new DbAutomatorException("Unsupported expression", new ArgumentException());
+                return GetSqlByExpression();
+            }
+            else
+            {
+                return GetSqlByItem();
+            }
+        }
 
+        private string GetSqlByItem()
+        {
+            string sql = $"DELETE FROM \"{_registeredClass.TableName}\" WHERE";
+
+            if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
+            {
+                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+            }
+            else
+            {
+                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
+            }
+
+            return $"{sql} RETURNING *;";
+        }
+
+        private string GetSqlByExpression()
+        {
+            string sql = $"DELETE FROM \"{_registeredClass.TableName}\" ";
+
+            if (_whereExpressionParts.Count > 0)
+            {
                 sql = $"{sql}WHERE ";
 
-                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(expressionParts)} ";
-
-                PostgresMethods.AddParameters(p, registeredClass, expressionParts);
+                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
             }
 
-            sql = $"{sql} RETURNING *;";
-
-            _logger.LogTrace(sql);
-
-            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            await connection.OpenAsync().ConfigureAwait(false);
-
-            Stopwatch stopwatch = StopWatchStart();
-
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
-
-            StopWatchEnd(stopwatch, "GetAsync()");
-
-            return result;
+            return $"{sql}RETURNING *;";
         }
 
-        private Stopwatch StopWatchStart()
-        {
-            Stopwatch result = new Stopwatch();
-            result.Start();
-            return result;
-        }
-
-        private void StopWatchEnd(Stopwatch stopwatch, string methodName)
-        {
-            stopwatch.Stop();
-            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning)
-            {
-                _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
-            }
-        }
+        public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(ToString()).ConfigureAwait(false);
     }
 }

@@ -5,145 +5,134 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-
-using Dapper;
-using Npgsql;
 
 using devhl.DBAutomator.Interfaces;
 using devhl.DBAutomator.Models;
+using MiaPlaza.ExpressionUtils.Evaluating;
+using MiaPlaza.ExpressionUtils;
 
 namespace devhl.DBAutomator
 {
-    internal class PostgresUpdateQuery<C> : IUpdateQuery<C>
+    public class Update<C> : BasePostgresQuery<C> where C : class
     {
-        private readonly DBAutomator _dBAutomator;
+        private readonly C? _item = null;
 
-        private readonly QueryOptions _queryOptions;
 
-        private readonly ILogger? _logger;
+        private List<ExpressionPart> _setExpressionParts = new List<ExpressionPart>();
+        
 
-        public PostgresUpdateQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
+
+        internal Update(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
+
             _queryOptions = queryOptions;
+
             _logger = logger;
+
+            _registeredClass = registeredClass;
+
+            _item = item;
+
+            PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
+
+            PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
         }
 
-        public async Task<IEnumerable<C>> UpdateAsync(Expression<Func<C, object>> set, Expression<Func<C, object>>? where = null)
+        internal Update(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
-            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
+            _dBAutomator = dBAutomator;
 
-            BinaryExpression? whereBinary = PostgresMethods.GetBinaryExpression(where);
+            _queryOptions = queryOptions;
 
-            List<ExpressionPart>? whereExpressionParts = PostgresMethods.GetExpressionParts(whereBinary);
+            _logger = logger;
 
-            BinaryExpression? setBinary = PostgresMethods.GetBinaryExpression(set);
-
-            List<ExpressionPart>? setExpressionParts = PostgresMethods.GetExpressionParts(setBinary);
-
-            if (setExpressionParts == null) throw new DbAutomatorException("Unsupported expression", new ArgumentException());
-
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(setExpressionParts, "s_")}";
-
-            if (whereExpressionParts != null)
-            {
-                sql = $"{sql} WHERE {PostgresMethods.ToColumnNameEqualsParameterName(whereExpressionParts, "w_")}";
-            }
-
-            sql = $"{sql} RETURNING *;";
-
-            _logger.LogTrace(sql);
-
-            DynamicParameters p = new DynamicParameters();
-
-            PostgresMethods.AddParameters(p, registeredClass, whereExpressionParts);
-
-            PostgresMethods.AddParameters(p, registeredClass, setExpressionParts, "s_");
-
-            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            connection.Open();
-
-            var stopWatch = StopWatchStart();
-
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
-
-            StopWatchEnd(stopWatch, "UpdateAsync");
-
-            connection.Close();
-
-            return result;
+            _registeredClass = registeredClass;
         }
 
-        public async Task<C> UpdateAsync(C item)
+        public Update<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
         {
-            if (item == null) throw new NullReferenceException("The item cannot be null.");
+            _queryOptions = queryOptions;
 
-            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
+            _logger = logger;
 
-            if (registeredClass.RegisteredProperties.Count(p => !p.NotMapped && p.IsKey) == 0) throw new Exception("The registered class does not have a primary key attribute.");
-
-            string sql = $"UPDATE \"{registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE ";
-
-            sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))} ";
-
-            DynamicParameters p = new DynamicParameters();
-
-            PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
-
-            PostgresMethods.AddParameters(p, item, registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
-
-            sql = $"{sql} RETURNING *;";
-
-            _logger.LogTrace(sql);
-
-            if (item is IDBEvent dBObject)
-            {
-                await dBObject.OnUpdateAsync(_dBAutomator).ConfigureAwait(false);
-            }
-
-            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            connection.Open();
-
-            var stopWatch = StopWatchStart();
-
-            var result = await connection.QuerySingleAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
-
-            StopWatchEnd(stopWatch, "UpdateAsync");
-
-            connection.Close();
-
-            if (item is IDBObject dbObjectUpdated)
-            {
-                dbObjectUpdated.IsNew = false;
-
-                dbObjectUpdated.IsDirty = false;
-            }
-
-            if (item is IDBEvent onUpdatedEvent)
-            {
-                await onUpdatedEvent.OnUpdatedAsync(_dBAutomator).ConfigureAwait(false);
-            }
-
-            return result;
+            return this;
         }
 
-        private Stopwatch StopWatchStart()
+        public Update<C> Set(Expression<Func<C, object>> set)
         {
-            Stopwatch result = new Stopwatch();
-            result.Start();
-            return result;
+            set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
+
+            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(set);
+
+            _setExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+
+            PostgresMethods.AddParameters(_p, _registeredClass, _setExpressionParts, "s_");
+
+            return this;
         }
 
-        private void StopWatchEnd(Stopwatch stopwatch, string methodName)
+        public Update<C> Where(Expression<Func<C, object>> where)
         {
-            stopwatch.Stop();
-            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning)
+            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
+            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
+
+            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+
+            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
+
+            return this;
+        }
+
+        public override string ToString()
+        {
+            if (_item == null)
             {
-                _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
+                return GetSqlByExpression();
             }
+            else
+            {
+                return GetSqlByItem();
+            }
+        }
+
+        private string GetSqlByItem()
+        {
+            if (_item == null) throw new DbAutomatorException("The item cannot be null.", new NullReferenceException());
+
+            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE";
+
+            if (_whereExpressionParts?.Count > 0)
+            {
+                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+            }
+            else
+            {
+                if (_registeredClass.RegisteredProperties.Count(p => !p.NotMapped && p.IsKey) == 0) throw new DbAutomatorException("The item does not have a key registered nor a where clause.", new ArgumentException());
+
+                foreach(var key in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
+                {
+                    sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+                }
+            }
+
+            return $"{sql} RETURNING *;";
+        }
+
+        public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString());
+
+        private string GetSqlByExpression()
+        {
+            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
+
+            if (_whereExpressionParts.Count > 0)
+            {
+                sql = $"{sql} WHERE {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
+            }
+
+            return $"{sql} RETURNING *;";
         }
     }
 }

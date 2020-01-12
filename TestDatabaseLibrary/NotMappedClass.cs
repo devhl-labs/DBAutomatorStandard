@@ -5,7 +5,6 @@ using System.Text;
 
 namespace TestDatabaseLibrary
 {
-    [NotMapped]
     public class NotMappedClass
     {
 

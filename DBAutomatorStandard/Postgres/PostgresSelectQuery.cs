@@ -4,119 +4,154 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 using Dapper;
 using Npgsql;
 
 using devhl.DBAutomator.Interfaces;
 using devhl.DBAutomator.Models;
+using devhl.Common;
+using MiaPlaza.ExpressionUtils;
+using MiaPlaza.ExpressionUtils.Evaluating;
 
 namespace devhl.DBAutomator
 {
-    internal class PostgresSelectQuery <C> : ISelectQuery<C>
+    public class Select<C> : BasePostgresQuery<C>
     {
-        private readonly DBAutomator _dBAutomator;
+        private readonly List<ExpressionPart> _selectExpressionParts = new List<ExpressionPart>();
 
-        private readonly QueryOptions _queryOptions;
 
-        private readonly ILogger? _logger;
+        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
 
-        public PostgresSelectQuery(DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+
+        private List<ExpressionPart> _orderByExpressionParts = new List<ExpressionPart>();
+
+        internal Select(Expression<Func<C, object>>? select, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
+
             _queryOptions = queryOptions;
+
             _logger = logger;
+
+            _registeredClass = registeredClass;
+
+            if (select == null) return;
+
+            select = PartialEvaluator.PartialEvalBody(select, ExpressionInterpreter.Instance);
+
+            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(select);
+
+            _selectExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
         }
 
-        public async Task<IEnumerable<C>> GetAsync(Expression<Func<C, object>>? where = null, OrderByClause<C>? orderBy = null)
+        public Select<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
         {
-            RegisteredClass<C> registeredClass = (RegisteredClass<C>) _dBAutomator.RegisteredClasses.First(r => r is RegisteredClass<C>);
+            _queryOptions = queryOptions;
+
+            _logger = logger;
+
+            return this;
+        }
+
+        public Select<C> Where(Expression<Func<C, object>> where)
+        {
+            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
             BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
 
-            List<ExpressionPart>? expressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
 
+            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
+
+            return this;
+        }
+
+        public Select<C> OrderBy(Expression<Func<C, object>> orderBy) => OrderBy(orderBy, true);
+
+        public Select<C> OrderByDesc(Expression<Func<C, object>> orderBy) => OrderBy(orderBy, false);
+
+        private Select<C> OrderBy(Expression<Func<C, object>> orderBy, bool ascending)
+        {
+            orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
+
+            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(orderBy);
+
+            var parts = PostgresMethods.GetExpressionParts(binaryExpression);
+
+            _orderByExpressionParts ??= new List<ExpressionPart>();
+
+            foreach(var part in parts.EmptyIfNull())
+            {
+                if (ascending) part.NodeType = ExpressionType.GreaterThan;
+
+                if (!ascending) part.NodeType = ExpressionType.LessThan;                
+
+                _orderByExpressionParts.Add(part);
+            }
+
+            return this;
+        }
+
+        public override string ToString()
+        {
             string sql = $"SELECT";
 
-            foreach (var property in registeredClass.RegisteredProperties.Where(p => !p.NotMapped))
+            if (_selectExpressionParts.Count == 0)
             {
-                sql = $"{sql} \"{property.ColumnName}\",";
+                foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped))
+                {
+                    sql = $"{sql} \"{property.ColumnName}\",";
+                }
+            }
+            else
+            {
+                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _selectExpressionParts)}";
             }
 
             sql = sql[0..^1];
 
-            sql = $"{sql} FROM \"{registeredClass.TableName}\"";
+            sql = $"{sql} FROM \"{_registeredClass.TableName}\"";
 
-            if (where != null)
+            if (_whereExpressionParts.Count > 0)
             {
-                sql = $"{sql} WHERE ";
+                sql = $"{sql} WHERE";
 
-                foreach (ExpressionPart expressionPart in expressionParts.DefaultIfEmpty())
+                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+
+                //foreach (ExpressionPart expressionPart in _whereExpressionParts)
+                //{
+                //    if (expressionPart.MemberExpression != null) sql = $"{sql} \"{expressionPart.MemberExpression?.Member.Name}\"";
+
+                //    sql = $"{sql} {expressionPart.NodeType.ToSqlSymbol()}";
+
+                //    if (expressionPart.MemberExpression != null) sql = $"{sql} @w_{expressionPart.MemberExpression?.Member.Name}";
+                //}
+            }
+
+            if (_orderByExpressionParts.Count > 0)
+            {
+                foreach(var expressionPart in _orderByExpressionParts)
                 {
-                    if (expressionPart.MemberExpression != null) sql = $"{sql} \"{expressionPart.MemberExpression?.Member.Name}\" ";
+                    RegisteredProperty registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
 
-                    sql = $"{sql} {expressionPart.NodeType.ToSqlSymbol()} ";
+                    if (expressionPart.NodeType == ExpressionType.GreaterThan) sql = $"{sql} \"{registeredProperty.ColumnName}\" ASC";
 
-                    if (expressionPart.MemberExpression != null) sql = $"{sql} @w_{expressionPart.MemberExpression?.Member.Name} ";
+                    if (expressionPart.NodeType == ExpressionType.LessThan) sql = $"{sql} \"{registeredProperty.ColumnName}\" DESC";
                 }
             }
 
-            if (orderBy != null)
-            {
-                sql = $"{sql} {orderBy.GetOrderByClause()}";
-            }
-
-            sql = $"{sql};";
-
-            _logger.LogTrace(sql);
-
-            DynamicParameters p = new DynamicParameters();
-
-            PostgresMethods.AddParameters(p, registeredClass, expressionParts);
-
-            using NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            await connection.OpenAsync().ConfigureAwait(false);
-
-            Stopwatch stopwatch = StopWatchStart();
-
-            var result = await connection.QueryAsync<C>(sql, p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
-
-            StopWatchEnd(stopwatch, "GetAsync()");
-
-            foreach (var item in result)
-            {
-                if (item is IDBObject dbObjectLoaded)
-                {
-                    dbObjectLoaded.IsNew = false;
-
-                    dbObjectLoaded.IsDirty = false;
-                }
-
-                if (item is IDBEvent dbEventLoaded)
-                {
-                    await dbEventLoaded.OnLoadedAsync(_dBAutomator).ConfigureAwait(false);
-                }
-            }
-
-            return result;
+            return $"{sql};";
         }
 
-        private Stopwatch StopWatchStart()
-        {
-            Stopwatch result = new Stopwatch();
-            result.Start();
-            return result;
-        }
+        public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(ToString()).ConfigureAwait(false);
 
-        private void StopWatchEnd(Stopwatch stopwatch, string methodName)
-        {
-            stopwatch.Stop();
-            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning)
-            {
-                _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
-            }
-        }
+        public async Task<C> QueryFirstAsync() => await QueryFirstAsync(ToString()).ConfigureAwait(false);
+
+        public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString()).ConfigureAwait(false);
+
+        public async Task<C> QuerySingleAsync() => await QuerySingleAsync(ToString()).ConfigureAwait(false);
+
+        public async Task<C> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(ToString()).ConfigureAwait(false);
     }
 }
