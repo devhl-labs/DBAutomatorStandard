@@ -207,7 +207,7 @@ namespace devhl.DBAutomator
         }
 
         /// <summary>
-        /// MemberExpression.Member.Name = @w_MemberExpression.Member.Name
+        /// MemberExpression.Member.Name =&#60;&#62; @w_MemberExpression.Member.Name
         /// </summary>
         /// <param name="expressionParts"></param>
         /// <param name="parameterPrefix"></param>
@@ -231,13 +231,6 @@ namespace devhl.DBAutomator
                 result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
 
                 if (registeredProperty != null) result = $"{result}@{parameterPrefix}{registeredProperty.ColumnName} ";
-
-
-                //if (expressionPart.MemberExpression != null) result = $"{result} \"{expressionPart.MemberExpression?.Member.Name}\" ";
-
-                //result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
-
-                //if (expressionPart.MemberExpression != null) result = $"{result}@{parameterPrefix}{expressionPart.MemberExpression?.Member.Name} ";
             }
 
             result = result[..^1];
