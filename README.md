@@ -31,7 +31,7 @@ newUser1.UserName = "changed";
 var h = await postgres.Update(newUser1).QuerySingleOrDefaultAsync();
 
 //update all matching rows
-var i = await postgres.Update<UserModel>().Where(u => u.UserName == "changed again", u => u.UserName == "changed").QueryAsync();
+var i = await postgres.Update<UserModel>().Set(u => u.UserName == "changed again").Where(u => u.UserName == "changed").QueryAsync();
 
 //get the required rows
 var j = await postgres.Select<UserModel>().Where(u => u.UserID > 2).QueryAsync();

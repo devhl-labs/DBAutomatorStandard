@@ -118,15 +118,6 @@ namespace devhl.DBAutomator
                 sql = $"{sql} WHERE";
 
                 sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
-
-                //foreach (ExpressionPart expressionPart in _whereExpressionParts)
-                //{
-                //    if (expressionPart.MemberExpression != null) sql = $"{sql} \"{expressionPart.MemberExpression?.Member.Name}\"";
-
-                //    sql = $"{sql} {expressionPart.NodeType.ToSqlSymbol()}";
-
-                //    if (expressionPart.MemberExpression != null) sql = $"{sql} @w_{expressionPart.MemberExpression?.Member.Name}";
-                //}
             }
 
             if (_orderByExpressionParts.Count > 0)
