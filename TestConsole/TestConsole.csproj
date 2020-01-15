@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql" Version="4.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DBAutomatorStandard\DBAutomatorStandard.csproj" />
     <ProjectReference Include="..\TestDatabaseLibrary\TestDatabaseLibrary.csproj" />
   </ItemGroup>

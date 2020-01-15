@@ -23,7 +23,7 @@ namespace devhl.DBAutomator
 
         private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
 
-        internal Update(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Update(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
 
@@ -35,12 +35,14 @@ namespace devhl.DBAutomator
 
             _item = item;
 
+            _connection = connection;
+
             PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
 
             PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
         }
 
-        internal Update(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Update(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
 
@@ -49,6 +51,8 @@ namespace devhl.DBAutomator
             _logger = logger;
 
             _registeredClass = registeredClass;
+
+            _connection = connection;
         }
 
         public Update<C> Modify(QueryOptions queryOptions, ILogger? logger = null)

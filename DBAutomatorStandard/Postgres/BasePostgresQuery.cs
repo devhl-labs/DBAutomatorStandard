@@ -1,12 +1,11 @@
 ﻿using Dapper;
 using devhl.DBAutomator.Interfaces;
 using devhl.DBAutomator.Models;
-using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace devhl.DBAutomator
@@ -20,6 +19,8 @@ namespace devhl.DBAutomator
         protected QueryOptions _queryOptions;
 
         protected RegisteredClass<C> _registeredClass;
+
+        protected IDbConnection _connection;
 
 #nullable enable
 
@@ -63,26 +64,15 @@ namespace devhl.DBAutomator
             }
         }
 
-        protected async Task<NpgsqlConnection> OpenConnection()
-        {
-            NpgsqlConnection connection = new NpgsqlConnection(_queryOptions.ConnectionString);
-
-            await connection.OpenAsync().ConfigureAwait(false);
-
-            return connection;
-        }
-
         protected async Task<IEnumerable<C>> QueryAsync(string sql)
         {
-            using NpgsqlConnection connection = await OpenConnection().ConfigureAwait(false);
-
             Stopwatch stopwatch = StopWatchStart();
 
             IEnumerable<C> result;
 
             try
             {
-                result = await connection.QueryAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await _connection.QueryAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
 
@@ -106,15 +96,13 @@ namespace devhl.DBAutomator
 
         protected async Task<C> QueryFirstAsync(string sql)
         {
-            using NpgsqlConnection connection = await OpenConnection().ConfigureAwait(false);
-
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
 
             try
             {
-                result = await connection.QueryFirstAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await _connection.QueryFirstAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
 
@@ -138,15 +126,13 @@ namespace devhl.DBAutomator
 
         protected async Task<C> QueryFirstOrDefaultAsync(string sql)
         {
-            using NpgsqlConnection connection = await OpenConnection().ConfigureAwait(false);
-
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
 
             try
             {
-                result = await connection.QueryFirstOrDefaultAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await _connection.QueryFirstOrDefaultAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
 
@@ -171,15 +157,13 @@ namespace devhl.DBAutomator
 
         protected async Task<C> QuerySingleAsync(string sql)
         {
-            using NpgsqlConnection connection = await OpenConnection().ConfigureAwait(false);
-
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
 
             try
             {
-                result = await connection.QuerySingleAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await _connection.QuerySingleAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
 
@@ -203,15 +187,13 @@ namespace devhl.DBAutomator
 
         protected async Task<C> QuerySingleOrDefaultAsync(string sql)
         {
-            using NpgsqlConnection connection = await OpenConnection().ConfigureAwait(false);
-
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
 
             try
             {
-                result = await connection.QuerySingleOrDefaultAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await _connection.QuerySingleOrDefaultAsync<C>(sql, _p, _queryOptions.DbTransaction, _queryOptions.CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
 

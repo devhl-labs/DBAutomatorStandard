@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
-using Dapper;
-using Npgsql;
 using devhl.DBAutomator.Interfaces;
 using devhl.DBAutomator.Models;
 using MiaPlaza.ExpressionUtils;
 using MiaPlaza.ExpressionUtils.Evaluating;
+using System.Data;
 
 namespace devhl.DBAutomator 
 {
@@ -20,7 +18,7 @@ namespace devhl.DBAutomator
 
         private readonly C? _item = null;
 
-        internal Delete(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
 
@@ -29,6 +27,8 @@ namespace devhl.DBAutomator
             _logger = logger;
 
             _registeredClass = registeredClass;
+
+            _connection = connection;
         }
 
         public Delete<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
@@ -40,7 +40,7 @@ namespace devhl.DBAutomator
             return this;
         }
 
-        internal Delete(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
 
@@ -49,6 +49,8 @@ namespace devhl.DBAutomator
             _logger = logger;
 
             _registeredClass = registeredClass;
+
+            _connection = connection;
 
             _item = item ?? throw new DbAutomatorException("Item must not be null.", new ArgumentException());
 

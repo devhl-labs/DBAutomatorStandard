@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
-using System.Linq;
 using System.IO;
-using System.Text.Json;
 
 using devhl.DBAutomator;
-using static devhl.DBAutomator.Enums;
 
 using TestDatabaseLibrary;
 using devhl.DBAutomator.Interfaces;
+using System.Data;
+using Npgsql;
 
 namespace TestConsole
 {
@@ -22,14 +21,13 @@ namespace TestConsole
 
             string password = File.ReadAllText(@"E:\Desktop\password.txt");
 
-            QueryOptions queryOptions = new QueryOptions
-            {
-                DataStore = DataStore.PostgreSQL          
-            };
+            QueryOptions queryOptions = new QueryOptions();
 
-            queryOptions.ConnectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
+            string connectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
 
-            Postgres = new DBAutomator(queryOptions, logService);
+            IDbConnection connection = new NpgsqlConnection(connectionString);
+
+            Postgres = new DBAutomator(connection, queryOptions, logService);
 
             Postgres.Register<UserModel>();
 

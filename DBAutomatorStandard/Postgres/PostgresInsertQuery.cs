@@ -3,10 +3,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
-using Dapper;
-using Npgsql;
-
 using devhl.DBAutomator.Interfaces;
+using System.Data;
 
 namespace devhl.DBAutomator
 {
@@ -14,7 +12,7 @@ namespace devhl.DBAutomator
     {
         private readonly C _item;
 
-        internal Insert(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, QueryOptions queryOptions, ILogger? logger = null)
+        internal Insert(C item, RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _dBAutomator = dBAutomator;
 
@@ -23,6 +21,8 @@ namespace devhl.DBAutomator
             _logger = logger;
 
             _registeredClass = registeredClass;
+
+            _connection = connection;
 
             if (item == null) throw new DbAutomatorException("Item must not be null.", new ArgumentException());
 
