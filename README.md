@@ -47,4 +47,4 @@ The Register method returns a RegisteredClass object.  You may edit the TableNam
 Your classes can optionally implement the IDBObject or IDBEvent interfaces, or inherit the DBObject class.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
 ## Compatibility
-This library is designed to work with PostgreSQL.
+This library was tested with Postgres.  Currenlty the types are hard coded to the column types.  This will be corrected.  ulong maps to long.
