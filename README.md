@@ -47,4 +47,4 @@ The Register method returns a RegisteredClass object.  You may edit the TableNam
 Your classes can optionally implement the IDBObject or IDBEvent interfaces, or inherit the DBObject class.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
 ## Compatibility
-This library was tested with Postgres.  Currenlty the types are hard coded to the column types.  This will be corrected.  ulong maps to long.
+This library was tested with Postgres.  If this library struggles to insert your data type into your database, set the RegisteredProperty's ToDatabaseColumn function to one of your own functions.  The output of which should be a type that can be inserted into your table.  See the test program for more details and other ways to use this library.
