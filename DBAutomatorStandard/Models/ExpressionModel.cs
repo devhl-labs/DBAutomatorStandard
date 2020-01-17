@@ -8,6 +8,8 @@ namespace devhl.DBAutomator
     {
         private readonly RegisteredClass<C> _registeredClass;
 
+        private string? _propertyName;
+
         public string ParameterPrefix { get; }
 
         public ExpressionModel(RegisteredClass<C> registeredClass, string parameterPrefix = "w_")
@@ -20,8 +22,6 @@ namespace devhl.DBAutomator
         public ExpressionType NodeType { get; set; }
 
         public string? ParameterName { get; set; }
-
-        private string? _propertyName;
         
         public string? PropertyName
         {

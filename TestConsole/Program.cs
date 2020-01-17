@@ -8,12 +8,17 @@ using TestDatabaseLibrary;
 using devhl.DBAutomator.Interfaces;
 using System.Data;
 using Npgsql;
+using System.Linq;
 
 namespace TestConsole
 {
     public class Program
     {
+#nullable disable
+
         public static DBAutomator Postgres { get; set; }
+
+#nullable enable
 
         public static async Task Main()
         {
@@ -23,13 +28,17 @@ namespace TestConsole
 
             QueryOptions queryOptions = new QueryOptions();
 
-            string connectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
+            string connectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";           
 
             IDbConnection connection = new NpgsqlConnection(connectionString);
 
             Postgres = new DBAutomator(connection, queryOptions, logService);
 
-            Postgres.Register<UserModel>();
+            var userModel = Postgres.Register<UserModel>();
+
+            var p = userModel.RegisteredProperty(p => p.UserID!);
+
+            p.ToDatabaseColumn = NullableULongToDatabaseColumn;
 
             Postgres.Register<AddressModel>();
 
@@ -105,13 +114,13 @@ namespace TestConsole
 
             var c = await Postgres.Delete<UserModel>().Where(u => u.UserNames == "z").QueryAsync();
 
-            var d = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 1).QueryAsync();
+            var d = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 1).QueryAsync();
 
-            var e = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 3 || u.UserNames == "b").QueryAsync();
+            var e = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 3 || u.UserNames == "b").QueryAsync();
 
-            var f = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > 4 && u.UserNames == "e").QueryAsync();
+            var f = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 4 && u.UserNames == "e").QueryAsync();
 
-            var g = await Postgres.Select<UserModel>().Where(u => u.UserID.Value == 1 && u.UserNames == "f" || u.UserType > UserType.User).QueryAsync();
+            var g = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value == 1 && u.UserNames == "f" || u.UserType > UserType.User).QueryAsync();
         }
 
         private static async Task TestUsingVariableClosure()
@@ -154,19 +163,27 @@ namespace TestConsole
 
             var i = new UserModel { UserNames = "f" };
 
-            var b = await Postgres.Select<UserModel>().Where(u => u.UserID.Value == a.UserID).QueryFirstOrDefaultAsync();
+            var b = await Postgres.Select<UserModel>().Where(u => u.UserID == a.UserID).QueryFirstOrDefaultAsync();
 
             var c = await Postgres.Update<UserModel>().Set(u => u.UserNames == a.UserNames).Where(u => u.UserID == a.UserID).QueryFirstOrDefaultAsync();
 
-            var d = await Postgres.Delete<UserModel>().Where(u => u.UserID.Value == a.UserID).QueryAsync();
+            var d = await Postgres.Delete<UserModel>().Where(u => u.UserID == a.UserID).QueryAsync();
 
-            var e = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID).QueryAsync();
+            var e = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID).QueryAsync();
 
-            var f = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID || u.UserNames == h.UserNames).QueryAsync();
+            var f = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID || u.UserNames == h.UserNames).QueryAsync();
 
-            var g = await Postgres.Select<UserModel>().Where(u => u.UserID.Value > a.UserID && u.UserNames == i.UserNames).QueryAsync();
+            var g = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID && u.UserNames == i.UserNames).QueryAsync();
 
-            var j = await Postgres.Select<UserModel>().Where(u => (u.UserID.Value == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User).QueryAsync();
+            //the MiaPlaza library will not remove this closure without the .Value
+            var j = await Postgres.Select<UserModel>().Where(u => (u.UserID!.Value == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User).QueryAsync();
+        }
+
+        public static object? NullableULongToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value)
+        {
+            if (value == null) return value;
+
+            return value.ToString();
         }
     }
 }

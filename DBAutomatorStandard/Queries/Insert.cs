@@ -8,7 +8,7 @@ using System.Data;
 
 namespace devhl.DBAutomator
 {
-    public class Insert<C> : BasePostgresQuery<C>
+    public class Insert<C> : BaseQuery<C>
     {
         private readonly C _item;
 
@@ -28,7 +28,7 @@ namespace devhl.DBAutomator
 
             _item = item;
 
-            PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
+            Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
         public Insert<C> Modify(QueryOptions queryOptions, ILogger? logger = null)

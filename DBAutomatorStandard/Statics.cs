@@ -7,42 +7,13 @@ using System.Linq.Expressions;
 using Dapper;
 
 using devhl.DBAutomator.Models;
+using MiaPlaza.ExpressionUtils.Evaluating;
+using MiaPlaza.ExpressionUtils;
 
 namespace devhl.DBAutomator
 {
-    internal static class PostgresMethods
+    internal static class Statics
     {
-        private static void AddDynamicParameter<C>(this DynamicParameters p, string parameterName, C item, RegisteredProperty registeredProperty)
-        {
-            if (item == null) throw new DbAutomatorException("The item cannot be null.", new ArgumentNullException("item"));
-
-            if (registeredProperty.PropertyType == typeof(string))
-            {
-                p.Add(parameterName, item.GetType().GetProperty(registeredProperty.PropertyName).GetValue(item, null));
-            }
-            else if (registeredProperty.PropertyType == typeof(ulong))
-            {
-                p.Add(parameterName, Convert.ToInt64(item.GetType().GetProperty(registeredProperty.PropertyName).GetValue(item, null)));
-            }
-            else if (registeredProperty.PropertyType == typeof(ulong?))
-            {
-                ulong? id = (ulong?) item.GetType().GetProperty(registeredProperty.PropertyName).GetValue(item, null);
-
-                if (id == null)
-                {
-                    p.Add(parameterName, null);
-                }
-                else
-                {
-                    p.Add(parameterName, Convert.ToInt64(id));
-                }
-            }
-            else
-            {
-                p.Add(parameterName, item.GetType().GetProperty(registeredProperty.PropertyName).GetValue(item));
-            }
-        }
-
         public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart>? expressionParts, string parameterPrefix = "w_")
         {
             if (expressionParts == null) return;
@@ -51,37 +22,17 @@ namespace devhl.DBAutomator
             {
                 if (expression.ConstantExpression == null || expression.MemberExpression == null) continue;
 
-                RegisteredProperty registeredProperty = GetRegisteredProperty(registeredClass, expression.MemberExpression);
-
-                //if (expression.MemberExpression.Expression is MemberExpression memberExpression)
-                //{
-                //    registeredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == ((MemberExpression) expression.MemberExpression.Expression).Member.Name); // .Member.Name);
-                //}
-                //else
-                //{
-                //    registeredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == expression.MemberExpression.Member.Name);
-                //}              
+                RegisteredProperty<C> registeredProperty = GetRegisteredProperty(registeredClass, expression.MemberExpression);             
 
                 string parameterName = $"@{parameterPrefix}{registeredProperty.PropertyName}";
 
-                if (expression.ConstantExpression.Value is ulong)
-                {
-                    p.Add(parameterName, Convert.ToInt64(expression.ConstantExpression.Value));
-                }
-                else if (expression.ConstantExpression.Value is ulong?)
-                {
-                    p.Add(parameterName, Convert.ToInt64(expression.ConstantExpression.Value)); //todo fix this
-                }
-                else
-                {
-                    p.Add(parameterName, expression.ConstantExpression.Value);
-                }
+                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, expression.ConstantExpression.Value));
             }
 
             return;
         }
 
-        public static void AddParameters<C>(DynamicParameters p, C item, IEnumerable<RegisteredProperty> registeredProperties, string parameterPrefix = "w_")
+        public static void AddParameters<C>(DynamicParameters p, C item, IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_")
         {
             if (item == null) throw new DbAutomatorException("The item cannot be null.", new ArgumentNullException("item"));
 
@@ -89,7 +40,7 @@ namespace devhl.DBAutomator
             {
                 string parameterName = $"@{parameterPrefix}{registeredProperty.PropertyName}";
 
-                p.AddDynamicParameter(parameterName, item, registeredProperty);
+                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, typeof(C).GetProperty(registeredProperty.PropertyName).GetValue(item, null)));
             }
         }
 
@@ -194,11 +145,11 @@ namespace devhl.DBAutomator
         /// <param name="registeredClass"></param>
         /// <param name="parameterPrefix"></param>
         /// <returns></returns>
-        public static string ToColumnNameEqualsParameterName(IEnumerable<RegisteredProperty> registeredProperties, string parameterPrefix = "w_")
+        public static string ToColumnNameEqualsParameterName<C>(IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_")
         {
             string result = string.Empty;
 
-            foreach(RegisteredProperty registeredProperty in registeredProperties)
+            foreach(RegisteredProperty<C> registeredProperty in registeredProperties)
             {
                 result = $"{result}\"{registeredProperty.ColumnName}\" = @{parameterPrefix}{registeredProperty.ColumnName}, ";
             }            
@@ -218,13 +169,12 @@ namespace devhl.DBAutomator
 
             foreach (ExpressionPart expressionPart in expressionParts)
             {
-                RegisteredProperty? registeredProperty = null;
+                RegisteredProperty<C>? registeredProperty = null;
 
                 if (expressionPart.MemberExpression != null)
                 {
                     registeredProperty = GetRegisteredProperty(registeredClass, expressionPart.MemberExpression);
-                }
-                
+                }                
 
                 if (registeredProperty != null) result = $"{result} \"{registeredProperty.ColumnName}\" ";
 
@@ -238,13 +188,17 @@ namespace devhl.DBAutomator
             return result;
         }
 
-        public static RegisteredProperty GetRegisteredProperty<C>(RegisteredClass<C> registeredClass, MemberExpression expression)
+        public static RegisteredProperty<C> GetRegisteredProperty<C>(RegisteredClass<C> registeredClass, MemberExpression expression)
         {
-            RegisteredProperty registeredProperty;
+            RegisteredProperty<C> registeredProperty;
 
-            if (expression.Expression is MemberExpression memberExpression)
+            if (expression.Member.Name == "Value" && expression.Expression is MemberExpression memberExpression)
             {
                 registeredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == ((MemberExpression) expression.Expression).Member.Name);
+            }
+            else if(expression.Expression is MemberExpression)
+            {
+                throw new DbAutomatorException("Unhandled expression type", new ArgumentException());
             }
             else
             {
@@ -269,7 +223,20 @@ namespace devhl.DBAutomator
                 _ => throw new DbAutomatorException("Invalid enum value", new ArgumentException())
             };
 
+        public static MemberExpression GetMemberExpression<C>(Expression<Func<C, object>> key)
+        {
+            MemberExpression? member = key.Body as MemberExpression;
 
+            if (key.Body is UnaryExpression unaryExpression)
+            {
+                member = unaryExpression.Operand as MemberExpression;
+            }
 
+            if (member?.Member.Name == "Value" && member.Expression is MemberExpression member1) member = member1;
+
+            if (member == null) throw new DbAutomatorException("Unhandled expression type", new ArgumentException());
+
+            return member;
+        }
     }
 }

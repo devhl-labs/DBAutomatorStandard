@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace devhl.DBAutomator
 {
-    public abstract class BasePostgresQuery<C>
+    public abstract class BaseQuery<C>
     {
 #nullable disable
 

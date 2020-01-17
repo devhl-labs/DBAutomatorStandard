@@ -10,11 +10,11 @@ using MiaPlaza.ExpressionUtils.Evaluating;
 
 namespace devhl.DBAutomator
 {
-    public class RegisteredClass<T>
+    public class RegisteredClass<C>
     {
         public string TableName { get; set; } = string.Empty;
 
-        public List<RegisteredProperty> RegisteredProperties { get; set; } = new List<RegisteredProperty>();
+        public List<RegisteredProperty<C>> RegisteredProperties { get; set; } = new List<RegisteredProperty<C>>();
 
         public RegisteredClass()
         {
@@ -22,9 +22,9 @@ namespace devhl.DBAutomator
 
             Dictionary<string, string> columnMaps = new Dictionary<string, string>();
 
-            foreach (PropertyInfo property in typeof(T).GetProperties())
+            foreach (PropertyInfo property in typeof(C).GetProperties())
             {
-                RegisteredProperty registeredProperty = new RegisteredProperty
+                RegisteredProperty<C> registeredProperty = new RegisteredProperty<C>
                 {
                     Property = property,
 
@@ -38,8 +38,12 @@ namespace devhl.DBAutomator
 
                     PropertyType = property.PropertyType,
 
-                    NotMapped = !property.IsStorable()
+                    NotMapped = !property.IsStorable()                    
                 };
+
+                registeredProperty.RegisteredClass = this;
+
+                //SetToDatabaseConverter(registeredProperty);
 
                 RegisteredProperties.Add(registeredProperty);
 
@@ -61,9 +65,9 @@ namespace devhl.DBAutomator
                 }
             });
 
-            var map = new CustomPropertyTypeMap(typeof(T), (type, columnName) => mapper(type, columnName));
+            var map = new CustomPropertyTypeMap(typeof(C), (type, columnName) => mapper(type, columnName));
 
-            SqlMapper.SetTypeMap(typeof(T), map);
+            SqlMapper.SetTypeMap(typeof(C), map);
         }
 
         public string GetColumnName(PropertyInfo property)
@@ -78,58 +82,40 @@ namespace devhl.DBAutomator
             return result;
         }
 
-        public RegisteredClass<T> NotMapped(Expression<Func<T, object>> ignore)
+        public RegisteredClass<C> NotMapped(Expression<Func<C, object>> key)
         {
-            string paramater = ignore.Parameters.First().Name;
+            key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            int start = paramater.Length + 1;
+            MemberExpression member = Statics.GetMemberExpression(key);
 
-            string propertyName = ignore.Body.ToString()[start..];
-
-            RegisteredProperties.First(p => p.PropertyName == propertyName).NotMapped = true;
+            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).NotMapped = true;
 
             return this;
         }
 
-        public RegisteredClass<T> Key(Expression<Func<T, object>> key)
+        public RegisteredClass<C> Key(Expression<Func<C, object>> key)
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression? member = key.Body as MemberExpression;
-
-            if (key.Body is UnaryExpression unaryExpression)
-            {
-                member = unaryExpression.Operand as MemberExpression;
-            }
-
-            if (member == null) throw new DbAutomatorException("Unhandled expression type", new ArgumentException());
-
+            MemberExpression member = Statics.GetMemberExpression(key);
 
             RegisteredProperties.First(p => p.PropertyName == member.Member.Name).IsKey = true;
 
             return this;
         }
 
-        public RegisteredClass<T> AutoIncrement(Expression<Func<T, object>> key)
+        public RegisteredClass<C> AutoIncrement(Expression<Func<C, object>> key)
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression? member = key.Body as MemberExpression;
-
-            if (key.Body is UnaryExpression unaryExpression)
-            {
-                member = unaryExpression.Operand as MemberExpression;
-            }
-
-            if (member == null) throw new DbAutomatorException("Unhandled expression type", new ArgumentException());
-
+            MemberExpression member = Statics.GetMemberExpression(key);
 
             RegisteredProperties.First(p => p.PropertyName == member.Member.Name).IsAutoIncrement = true;
 
             return this;
         }
 
-        public RegisteredClass<T> ColumnName(Expression<Func<T, object>> key)
+        public RegisteredClass<C> ColumnName(Expression<Func<C, object>> key)
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
@@ -174,14 +160,23 @@ namespace devhl.DBAutomator
 
         private string GetTableName()
         {
-            string result = typeof(T).Name;
+            string result = typeof(C).Name;
 
-            if (typeof(T).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
+            if (typeof(C).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
             {
                 result = tableNameAttribute.Name;
             }
 
             return $"{result}";
+        }
+
+        public RegisteredProperty<C> RegisteredProperty(Expression<Func<C, object>> key)
+        {
+            key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
+
+            MemberExpression memberExpression = Statics.GetMemberExpression(key);
+
+            return RegisteredProperties.First(p => p.PropertyName == memberExpression.Member.Name);
         }
     }
 }

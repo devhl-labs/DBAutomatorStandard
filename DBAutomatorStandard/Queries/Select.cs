@@ -14,7 +14,7 @@ using System.Data;
 
 namespace devhl.DBAutomator
 {
-    public class Select<C> : BasePostgresQuery<C>
+    public class Select<C> : BaseQuery<C>
     {
         private readonly List<ExpressionPart> _selectExpressionParts = new List<ExpressionPart>();
 
@@ -40,9 +40,9 @@ namespace devhl.DBAutomator
 
             select = PartialEvaluator.PartialEvalBody(select, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(select);
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(select);
 
-            _selectExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _selectExpressionParts = Statics.GetExpressionParts(binaryExpression);
         }
 
         public Select<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
@@ -58,11 +58,11 @@ namespace devhl.DBAutomator
         {
             where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
 
-            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
+            Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
             return this;
         }
@@ -75,9 +75,9 @@ namespace devhl.DBAutomator
         {
             orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(orderBy);
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(orderBy);
 
-            var parts = PostgresMethods.GetExpressionParts(binaryExpression);
+            var parts = Statics.GetExpressionParts(binaryExpression);
 
             _orderByExpressionParts ??= new List<ExpressionPart>();
 
@@ -106,7 +106,7 @@ namespace devhl.DBAutomator
             }
             else
             {
-                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _selectExpressionParts)}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass, _selectExpressionParts)}";
             }
 
             sql = sql[0..^1];
@@ -117,14 +117,14 @@ namespace devhl.DBAutomator
             {
                 sql = $"{sql} WHERE";
 
-                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+                sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
             }
 
             if (_orderByExpressionParts.Count > 0)
             {
                 foreach(var expressionPart in _orderByExpressionParts)
                 {
-                    RegisteredProperty registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
+                    RegisteredProperty<C> registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
 
                     if (expressionPart.NodeType == ExpressionType.GreaterThan) sql = $"{sql} \"{registeredProperty.ColumnName}\" ASC";
 

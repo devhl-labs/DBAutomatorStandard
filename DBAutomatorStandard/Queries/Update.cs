@@ -13,7 +13,7 @@ using MiaPlaza.ExpressionUtils;
 
 namespace devhl.DBAutomator
 {
-    public class Update<C> : BasePostgresQuery<C> where C : class
+    public class Update<C> : BaseQuery<C> where C : class
     {
         private readonly C? _item = null;
 
@@ -37,9 +37,9 @@ namespace devhl.DBAutomator
 
             _connection = connection;
 
-            PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
+            Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
 
-            PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
+            Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
         }
 
         internal Update(RegisteredClass<C> registeredClass, DBAutomator dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
@@ -68,11 +68,11 @@ namespace devhl.DBAutomator
         {
             set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(set);
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(set);
 
-            _setExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _setExpressionParts = Statics.GetExpressionParts(binaryExpression);
 
-            PostgresMethods.AddParameters(_p, _registeredClass, _setExpressionParts, "s_");
+            Statics.AddParameters(_p, _registeredClass, _setExpressionParts, "s_");
 
             return this;
         }
@@ -81,11 +81,11 @@ namespace devhl.DBAutomator
         {
             where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = PostgresMethods.GetBinaryExpression(where);
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
 
-            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
+            Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
             return this;
         }
@@ -106,11 +106,11 @@ namespace devhl.DBAutomator
         {
             if (_item == null) throw new DbAutomatorException("The item cannot be null.", new NullReferenceException());
 
-            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE";
+            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE";
 
             if (_whereExpressionParts?.Count > 0)
             {
-                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
             }
             else
             {
@@ -118,7 +118,7 @@ namespace devhl.DBAutomator
 
                 foreach(var key in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
                 {
-                    sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+                    sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
                 }
             }
 
@@ -129,11 +129,11 @@ namespace devhl.DBAutomator
 
         private string GetSqlByExpression()
         {
-            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
+            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
 
             if (_whereExpressionParts.Count > 0)
             {
-                sql = $"{sql} WHERE {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
+                sql = $"{sql} WHERE {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
             }
 
             return $"{sql} RETURNING *;";

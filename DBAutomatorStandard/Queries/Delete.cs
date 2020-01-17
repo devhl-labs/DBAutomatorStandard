@@ -12,7 +12,7 @@ using System.Data;
 
 namespace devhl.DBAutomator 
 {
-    public class Delete<C> : BasePostgresQuery<C> where C : class
+    public class Delete<C> : BaseQuery<C> where C : class
     {
         private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
 
@@ -56,11 +56,11 @@ namespace devhl.DBAutomator
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
+                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
             }
             else
             {
-                PostgresMethods.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
+                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
             }
 
         }
@@ -69,11 +69,11 @@ namespace devhl.DBAutomator
         {
             where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
-            BinaryExpression binaryExpression = PostgresMethods.GetBinaryExpression(where);
+            BinaryExpression binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = PostgresMethods.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
 
-            PostgresMethods.AddParameters(_p, _registeredClass, _whereExpressionParts);
+            Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
             return this;
         }
@@ -96,11 +96,11 @@ namespace devhl.DBAutomator
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
             }
             else
             {
-                sql = $"{sql} {PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
             }
 
             return $"{sql} RETURNING *;";
@@ -114,7 +114,7 @@ namespace devhl.DBAutomator
             {
                 sql = $"{sql}WHERE ";
 
-                sql = $"{sql}{PostgresMethods.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
+                sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
             }
 
             return $"{sql}RETURNING *;";
