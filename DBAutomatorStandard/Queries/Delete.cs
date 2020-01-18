@@ -96,11 +96,11 @@ namespace devhl.DBAutomator
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey), delimiter: " AND")}";
             }
             else
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped))}";
+                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), delimiter: " AND")}";
             }
 
             return $"{sql} RETURNING *;";

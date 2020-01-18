@@ -14,6 +14,21 @@ namespace devhl.DBAutomator
 {
     internal static class Statics
     {
+        public static string GetOperator(this Enums.Comparison comparison)
+        {
+            if (comparison == Enums.Comparison.Equals) return "=";
+
+            if (comparison == Enums.Comparison.LessThan) return "<";
+
+            if (comparison == Enums.Comparison.LessThanOrEqualTo) return "<=";
+
+            if (comparison == Enums.Comparison.GreaterThan) return ">";
+
+            if (comparison == Enums.Comparison.GreaterThanOrEqualTo) return ">=";
+
+            throw new DbAutomatorException("Unhandled value", new ArgumentException());
+        }
+
         public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart>? expressionParts, string parameterPrefix = "w_")
         {
             if (expressionParts == null) return;
@@ -145,16 +160,20 @@ namespace devhl.DBAutomator
         /// <param name="registeredClass"></param>
         /// <param name="parameterPrefix"></param>
         /// <returns></returns>
-        public static string ToColumnNameEqualsParameterName<C>(IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_")
+        public static string ToColumnNameEqualsParameterName<C>(IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_", string delimiter = "")
         {
             string result = string.Empty;
 
             foreach(RegisteredProperty<C> registeredProperty in registeredProperties)
             {
-                result = $"{result}\"{registeredProperty.ColumnName}\" = @{parameterPrefix}{registeredProperty.ColumnName}, ";
-            }            
+                result = $"{result} \"{registeredProperty.ColumnName}\" = @{parameterPrefix}{registeredProperty.ColumnName}{delimiter}";
+            }
 
-            return result[..^2];
+            if (result.EndsWith(delimiter)) result = result[..^delimiter.Length];
+
+            //return result[..^1];
+
+            return result;
         }
 
         /// <summary>

@@ -106,7 +106,7 @@ namespace devhl.DBAutomator
         {
             if (_item == null) throw new DbAutomatorException("The item cannot be null.", new NullReferenceException());
 
-            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_")} WHERE";
+            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), "s_", ", ")} WHERE";
 
             if (_whereExpressionParts?.Count > 0)
             {
@@ -116,10 +116,10 @@ namespace devhl.DBAutomator
             {
                 if (_registeredClass.RegisteredProperties.Count(p => !p.NotMapped && p.IsKey) == 0) throw new DbAutomatorException("The item does not have a key registered nor a where clause.", new ArgumentException());
 
-                foreach(var key in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
-                {
-                    sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))}";
-                }
+                //foreach(var key in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
+                //{
+                    sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey), delimiter: " AND")}";
+                //}
             }
 
             return $"{sql} RETURNING *;";

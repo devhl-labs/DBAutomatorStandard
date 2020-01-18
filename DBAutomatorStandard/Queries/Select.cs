@@ -18,6 +18,15 @@ namespace devhl.DBAutomator
     {
         private readonly List<ExpressionPart> _selectExpressionParts = new List<ExpressionPart>();
 
+        private int? _top = null;
+
+        private int? _limit = null;
+
+        private double? _topPercent = null;
+
+        private Enums.Comparison _comparison;
+
+        private int? _rowNum = null;
 
         private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
 
@@ -93,9 +102,69 @@ namespace devhl.DBAutomator
             return this;
         }
 
+        /// <summary>
+        /// MySQL, Postgres, and others
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        public Select<C> Limit(int limit)
+        {
+            _limit = limit;
+
+            return this;
+        }
+
+        /// <summary>
+        /// SQL Server specific
+        /// </summary>
+        /// <param name="top"></param>
+        /// <returns></returns>
+        public Select<C> Top(int top)
+        {
+            _top = top;
+
+            return this;
+        }
+
+        /// <summary>
+        /// SQL Server specific
+        /// </summary>
+        /// <param name="top"></param>
+        /// <returns></returns>
+        public Select<C> TopPercent(int top)
+        {
+            _topPercent = top;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Oracle specific
+        /// </summary>
+        /// <param name="comparison"></param>
+        /// <param name="rowNum"></param>
+        /// <returns></returns>
+        public Select<C> RowNum(Enums.Comparison comparison, int rowNum)
+        {
+            _comparison = comparison;
+
+            _rowNum = rowNum;
+
+            return this;
+        }
+
         public override string ToString()
         {
             string sql = $"SELECT";
+
+            if (_top != null)
+            {
+                sql = $"{sql} TOP({_top})";
+            }
+            else if (_topPercent != null)
+            {
+                sql = $"{sql} TOP({_topPercent}) PERCENT";
+            }
 
             if (_selectExpressionParts.Count == 0)
             {
@@ -106,7 +175,14 @@ namespace devhl.DBAutomator
             }
             else
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass, _selectExpressionParts)}";
+                foreach(var expression in _selectExpressionParts.Where(e => e.MemberExpression != null))
+                {
+                    RegisteredProperty<C> registeredProperty = Statics.GetRegisteredProperty(_registeredClass, expression.MemberExpression!);
+
+                    sql = $"{sql} \"{registeredProperty.ColumnName}\", ";
+                }
+
+                sql = sql[..^1];
             }
 
             sql = sql[0..^1];
@@ -116,6 +192,8 @@ namespace devhl.DBAutomator
             if (_whereExpressionParts.Count > 0)
             {
                 sql = $"{sql} WHERE";
+
+                if (_rowNum != null) sql = $"{sql} ROWNUM {_comparison.GetOperator()} {_rowNum}";
 
                 sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
             }
@@ -131,6 +209,8 @@ namespace devhl.DBAutomator
                     if (expressionPart.NodeType == ExpressionType.LessThan) sql = $"{sql} \"{registeredProperty.ColumnName}\" DESC";
                 }
             }
+
+            if (_limit != null) sql = $"{sql} LIMIT {_limit}";
 
             return $"{sql};";
         }
