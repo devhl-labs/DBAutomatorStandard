@@ -51,7 +51,7 @@ namespace devhl.DBAutomator
         {
             if (item == null) throw new DbAutomatorException("The item cannot be null.", new ArgumentNullException("item"));
 
-            foreach (var registeredProperty in registeredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement))
+            foreach (var registeredProperty in registeredProperties) //moved the where clause to higher
             {
                 string parameterName = $"@{parameterPrefix}{registeredProperty.PropertyName}";
 

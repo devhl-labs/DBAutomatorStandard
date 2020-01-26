@@ -62,7 +62,6 @@ namespace devhl.DBAutomator
             {
                 Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
             }
-
         }
 
         public Delete<C> Where(Expression<Func<C, object>>? where)
