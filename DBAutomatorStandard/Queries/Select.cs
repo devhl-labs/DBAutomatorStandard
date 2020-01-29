@@ -82,22 +82,39 @@ namespace devhl.DBAutomator
 
         private Select<C> OrderBy(Expression<Func<C, object>> orderBy, bool ascending)
         {
+            //orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
+
+            //BinaryExpression? binaryExpression = Statics.GetBinaryExpression(orderBy);
+
+            //var parts = Statics.GetExpressionParts(binaryExpression);
+
+            //_orderByExpressionParts ??= new List<ExpressionPart>();
+
+            //foreach (var part in parts.EmptyIfNull())
+            //{
+            //    if (ascending) part.NodeType = ExpressionType.GreaterThan;
+
+            //    if (!ascending) part.NodeType = ExpressionType.LessThan;
+
+            //    _orderByExpressionParts.Add(part);
+            //}
+
+            //return this;
+
             orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
-
-            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(orderBy);
-
-            var parts = Statics.GetExpressionParts(binaryExpression);
 
             _orderByExpressionParts ??= new List<ExpressionPart>();
 
-            foreach(var part in parts.EmptyIfNull())
+            ExpressionPart part = new ExpressionPart
             {
-                if (ascending) part.NodeType = ExpressionType.GreaterThan;
+                MemberExpression = Statics.GetMemberExpression(orderBy)
+            };
 
-                if (!ascending) part.NodeType = ExpressionType.LessThan;                
+            if (ascending) part.NodeType = ExpressionType.GreaterThan;
 
-                _orderByExpressionParts.Add(part);
-            }
+            if (!ascending) part.NodeType = ExpressionType.LessThan;
+
+            _orderByExpressionParts.Add(part);
 
             return this;
         }
@@ -200,6 +217,8 @@ namespace devhl.DBAutomator
 
             if (_orderByExpressionParts.Count > 0)
             {
+                sql = $"{sql} ORDER BY";
+
                 foreach(var expressionPart in _orderByExpressionParts)
                 {
                     RegisteredProperty<C> registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
@@ -224,5 +243,7 @@ namespace devhl.DBAutomator
         public async Task<C> QuerySingleAsync() => await QuerySingleAsync(ToString()).ConfigureAwait(false);
 
         public async Task<C> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(ToString()).ConfigureAwait(false);
+
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
     }
 }

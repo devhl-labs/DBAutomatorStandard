@@ -197,9 +197,16 @@ namespace devhl.DBAutomator
 
                 if (registeredProperty != null) result = $"{result} \"{registeredProperty.ColumnName}\" ";
 
-                result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
+                if (expressionPart.MemberExpression != null && expressionPart.ConstantExpression?.Value == null)
+                {
+                    result = $"{result}IS NULL ";
+                }
+                else
+                {
+                    result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
 
-                if (registeredProperty != null) result = $"{result}@{parameterPrefix}{registeredProperty.ColumnName} ";
+                    if (registeredProperty != null) result = $"{result}@{parameterPrefix}{registeredProperty.ColumnName} ";
+                }
             }
 
             result = result[..^1];

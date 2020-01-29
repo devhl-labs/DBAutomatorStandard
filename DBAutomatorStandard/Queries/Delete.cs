@@ -56,7 +56,7 @@ namespace devhl.DBAutomator
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
+                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey));
             }
             else
             {
@@ -120,5 +120,7 @@ namespace devhl.DBAutomator
         }
 
         public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(ToString()).ConfigureAwait(false);
+
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
     }
 }

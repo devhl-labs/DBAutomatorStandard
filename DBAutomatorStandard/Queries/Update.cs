@@ -133,6 +133,8 @@ namespace devhl.DBAutomator
 
         public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString());
 
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
+
         private string GetSqlByExpression()
         {
             string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
