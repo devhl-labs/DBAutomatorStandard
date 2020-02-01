@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using devhl.DBAutomator.Interfaces;
+using Dapper.SqlWriter.Interfaces;
 
-using devhl.DBAutomator;
+using Dapper.SqlWriter;
 
 namespace TestDatabaseLibrary
 {
@@ -34,47 +34,47 @@ namespace TestDatabaseLibrary
 
 
 
-		public Task OnDeleteAsync(DBAutomator dBAutomator)
+		public Task OnDeleteAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnDeletedAsync(DBAutomator dBAutomator)
+		public Task OnDeletedAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnInsertAsync(DBAutomator dBAutomator)
+		public Task OnInsertAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnInsertedAsync(DBAutomator dBAutomator)
+		public Task OnInsertedAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnLoadedAsync(DBAutomator dBAutomator)
+		public Task OnLoadedAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnSaveAsync(DBAutomator dBAutomator)
+		public Task OnSaveAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnSavedAsync(DBAutomator dBAutomator)
+		public Task OnSavedAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnUpdateAsync(DBAutomator dBAutomator)
+		public Task OnUpdateAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}
 
-		public Task OnUpdatedAsync(DBAutomator dBAutomator)
+		public Task OnUpdatedAsync(SqlWriter dBAutomator)
 		{
 			return Task.CompletedTask;
 		}

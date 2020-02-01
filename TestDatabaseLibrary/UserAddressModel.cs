@@ -1,4 +1,4 @@
-﻿using devhl.DBAutomator;
+﻿using Dapper.SqlWriter;
 
 namespace TestDatabaseLibrary
 {

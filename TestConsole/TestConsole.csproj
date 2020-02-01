@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="4.1.2" />
+    <PackageReference Include="Npgsql" Version="4.1.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DBAutomatorStandard\DBAutomatorStandard.csproj" />
+    <ProjectReference Include="..\Dapper.SqlWriter\Dapper.SqlWriter.csproj" />
     <ProjectReference Include="..\TestDatabaseLibrary\TestDatabaseLibrary.csproj" />
   </ItemGroup>
 

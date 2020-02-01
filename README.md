@@ -2,16 +2,13 @@
 This .NET Standard 2.1 library allows you to easily save and retrieve your objects from a database.
 
 ## [Test Program](/TestConsole/Program.cs)
-Begin by instantiating a QueryOptions object, and pass that into the DBAutomator class.  Then register your database POCO classes with the library.
+Begin by instantiating a QueryOptions object, and pass that into the SqlWriter class.  Then register your database POCO classes with the library.
 ```csharp
-QueryOptions queryOptions = new QueryOptions
-{
-    DataStore = DataStore.PostgreSQL,          
-};
+QueryOptions queryOptions = new QueryOptions();
 
 queryOptions.ConnectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
 
-DBAutomator postgres = new DBAutomator(queryOptions, logService);
+SqlWriter postgres = new SqlWriter(queryOptions, logService);
 
 postgres.Register<UserModel>();
 postgres.Register<AddressModel>();

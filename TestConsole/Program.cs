@@ -2,10 +2,10 @@
 using System.Threading.Tasks;
 using System.IO;
 
-using devhl.DBAutomator;
+using Dapper.SqlWriter;
 
 using TestDatabaseLibrary;
-using devhl.DBAutomator.Interfaces;
+using Dapper.SqlWriter.Interfaces;
 using System.Data;
 using Npgsql;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace TestConsole
     {
 #nullable disable
 
-        public static DBAutomator Postgres { get; set; }
+        public static SqlWriter Postgres { get; set; }
 
 #nullable enable
 
@@ -32,7 +32,7 @@ namespace TestConsole
 
             IDbConnection connection = new NpgsqlConnection(connectionString);
 
-            Postgres = new DBAutomator(connection, queryOptions, logService);
+            Postgres = new SqlWriter(connection, queryOptions, logService);
 
             var userModel = Postgres.Register<UserModel>();
 

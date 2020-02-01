@@ -1,10 +1,8 @@
-﻿using devhl.DBAutomator;
-using devhl.DBAutomator.Interfaces;
-using devhl.DBAutomator.Models;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using System.Threading.Tasks;
+
+using Dapper.SqlWriter.Interfaces;
+using Dapper.SqlWriter.Models;
 
 namespace TestConsole
 {

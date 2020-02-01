@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DBAutomatorStandard\DBAutomatorStandard.csproj" />
+    <ProjectReference Include="..\Dapper.SqlWriter\Dapper.SqlWriter.csproj" />
   </ItemGroup>
 
 </Project>
