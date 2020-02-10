@@ -8,13 +8,13 @@ using System.Data;
 
 namespace Dapper.SqlWriter
 {
-    public class Insert<C> : BaseQuery<C>
+    public class Insert<C> : BaseQuery<C> where C : class
     {
         private readonly C _item;
 
         internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -42,7 +42,7 @@ namespace Dapper.SqlWriter
 
         public override string ToString()
         {
-            string sql = $"INSERT INTO \"{_registeredClass.TableName}\" (";
+            string sql = $"INSERT INTO \"{_registeredClass.DatabaseTableName}\" (";
 
             foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
 
@@ -57,6 +57,15 @@ namespace Dapper.SqlWriter
             return $"{sql}) RETURNING *;";
         }
 
-        public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString()).ConfigureAwait(false);
+        public async Task<C> QueryFirstAsync()
+        {
+            if (_item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(_sqlWriter);
+
+            var result = await QueryFirstAsync(QueryType.Insert, ToString()).ConfigureAwait(false);
+
+            if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
+
+            return result;
+        }
     }
 }

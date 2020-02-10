@@ -4,15 +4,34 @@ using System.Text;
 
 namespace Dapper.SqlWriter
 {
-    public class Enums
+    public enum Comparison
     {
-        public enum Comparison
-        {
-            Equals,
-            LessThan,
-            LessThanOrEqualTo,
-            GreaterThan,
-            GreaterThanOrEqualTo
-        }
+        Equals,
+        LessThan,
+        LessThanOrEqualTo,
+        GreaterThan,
+        GreaterThanOrEqualTo
+    }
+
+    public enum ObjectState
+    {
+        Clean,
+        Dirty,
+        New,
+        Deleted
+    }
+
+    public enum QueryType
+    {
+        Select,
+        Insert,
+        Update,
+        Delete
+    }
+
+    public enum Parens
+    {
+        Left,
+        Right
     }
 }

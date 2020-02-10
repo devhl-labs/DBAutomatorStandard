@@ -12,13 +12,13 @@ namespace Dapper.SqlWriter
 {
     public class RegisteredClass<C>
     {
-        public string TableName { get; set; } = string.Empty;
+        internal string DatabaseTableName { get; set; } = string.Empty;
 
         public List<RegisteredProperty<C>> RegisteredProperties { get; set; } = new List<RegisteredProperty<C>>();
 
         public RegisteredClass()
         {
-            TableName = GetTableName();
+            DatabaseTableName = GetTableName();
 
             Dictionary<string, string> columnMaps = new Dictionary<string, string>();
 
@@ -70,18 +70,6 @@ namespace Dapper.SqlWriter
             SqlMapper.SetTypeMap(typeof(C), map);
         }
 
-        public string GetColumnName(PropertyInfo property)
-        {
-            string result = property.Name;
-
-            if (property.GetCustomAttributes<ColumnAttribute>(true).FirstOrDefault() is ColumnAttribute columnNameAttribute)
-            {
-                result = columnNameAttribute.Name;
-            }
-
-            return result;
-        }
-
         public RegisteredClass<C> NotMapped(Expression<Func<C, object>> key)
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
@@ -111,6 +99,13 @@ namespace Dapper.SqlWriter
             MemberExpression member = Statics.GetMemberExpression(key);
 
             RegisteredProperties.First(p => p.PropertyName == member.Member.Name).IsAutoIncrement = true;
+
+            return this;
+        }
+
+        public RegisteredClass<C> TableName(string tableName)
+        {
+            DatabaseTableName = tableName;
 
             return this;
         }
@@ -167,7 +162,19 @@ namespace Dapper.SqlWriter
                 result = tableNameAttribute.Name;
             }
 
-            return $"{result}";
+            return result;
+        }
+
+        private string GetColumnName(PropertyInfo property)
+        {
+            string result = property.Name;
+
+            if (property.GetCustomAttributes<ColumnAttribute>(true).FirstOrDefault() is ColumnAttribute columnNameAttribute)
+            {
+                result = columnNameAttribute.Name;
+            }
+
+            return result;
         }
 
         public RegisteredProperty<C> RegisteredProperty(Expression<Func<C, object>> key)

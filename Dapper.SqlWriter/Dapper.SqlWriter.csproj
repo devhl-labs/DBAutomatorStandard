@@ -13,8 +13,8 @@
     <Product>Dapper.SqlWriter</Product>
     <Description>Save and update objects to a database using expressions.</Description>
     <Copyright>2019</Copyright>
-    <PackageProjectUrl>https://github.com/devhl-labs/DBAutomator</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/devhl-labs/DBAutomator</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/devhl-labs/Dapper.SqlWriter</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/devhl-labs/Dapper.SqlWriter</RepositoryUrl>
     <PackageTags>Dapper SqlWriter DBAutomator database Linq db2linq database2linq databasetolinq devhl</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageIcon>icon.png</PackageIcon>

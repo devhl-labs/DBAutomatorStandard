@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Text;
 
-namespace Dapper.SqlWriter.Interfaces
-{
-    interface IDBObject
-    {
-        bool IsNew { get; set; }
+//namespace Dapper.SqlWriter.Interfaces
+//{
+//    interface IDBObject
+//    {
+//        bool IsNew { get; set; }
 
-        bool IsDirty { get; set; }
-    }
-}
+//        bool IsDirty { get; set; }
+//    }
+//}

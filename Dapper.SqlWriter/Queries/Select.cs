@@ -13,7 +13,7 @@ using System.Data;
 
 namespace Dapper.SqlWriter
 {
-    public class Select<C> : BaseQuery<C>
+    public class Select<C> : BaseQuery<C> where C : class
     {
         private readonly List<ExpressionPart> _selectExpressionParts = new List<ExpressionPart>();
 
@@ -23,7 +23,7 @@ namespace Dapper.SqlWriter
 
         private double? _topPercent = null;
 
-        private Enums.Comparison _comparison;
+        private Comparison _comparison;
 
         private int? _rowNum = null;
 
@@ -34,7 +34,7 @@ namespace Dapper.SqlWriter
 
         internal Select(Expression<Func<C, object>>? select, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -160,7 +160,7 @@ namespace Dapper.SqlWriter
         /// <param name="comparison"></param>
         /// <param name="rowNum"></param>
         /// <returns></returns>
-        public Select<C> RowNum(Enums.Comparison comparison, int rowNum)
+        public Select<C> RowNum(Comparison comparison, int rowNum)
         {
             _comparison = comparison;
 
@@ -203,7 +203,7 @@ namespace Dapper.SqlWriter
 
             sql = sql[0..^1];
 
-            sql = $"{sql} FROM \"{_registeredClass.TableName}\"";
+            sql = $"{sql} FROM \"{_registeredClass.DatabaseTableName}\"";
 
             if (_whereExpressionParts.Count > 0)
             {
@@ -233,16 +233,16 @@ namespace Dapper.SqlWriter
             return $"{sql};";
         }
 
-        public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(ToString()).ConfigureAwait(false);
+        public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<C> QueryFirstAsync() => await QueryFirstAsync(ToString()).ConfigureAwait(false);
+        public async Task<C> QueryFirstAsync() => await QueryFirstAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString()).ConfigureAwait(false);
+        public async Task<C?> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<C> QuerySingleAsync() => await QuerySingleAsync(ToString()).ConfigureAwait(false);
+        public async Task<C> QuerySingleAsync() => await QuerySingleAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<C> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(ToString()).ConfigureAwait(false);
+        public async Task<C?> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false)).ToList();
     }
 }

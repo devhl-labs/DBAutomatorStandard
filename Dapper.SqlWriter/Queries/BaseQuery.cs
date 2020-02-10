@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace Dapper.SqlWriter
 {
-    public abstract class BaseQuery<C>
+    public abstract class BaseQuery<C> where C : class
     {
 #nullable disable
 
-        protected SqlWriter _dBAutomator;
+        protected SqlWriter _sqlWriter;
 
         protected QueryOptions _queryOptions;
 
@@ -40,30 +40,27 @@ namespace Dapper.SqlWriter
         {
             stopwatch.Stop();
 
-            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning) _dBAutomator.SlowQueryDetected(methodName, stopwatch.Elapsed);
+            if (stopwatch.Elapsed > _queryOptions.SlowQueryWarning) _sqlWriter.SlowQueryDetected(methodName, stopwatch.Elapsed);
         }
 
-        protected async Task PrepareResult(IEnumerable<C> results)
+        protected void PrepareResults(QueryType queryType, IEnumerable<C> results)
         {
-            foreach (var result in results) await PrepareResult(result).ConfigureAwait(false);
+            foreach (var result in results) PrepareResult(queryType, result);
         }
 
-        protected async Task PrepareResult(C result)
+        protected void PrepareResult(QueryType queryType, C result)
         {
-            if (result is IDBObject dbObjectLoaded)
+            if (result is DBObject<C> dbObject)
             {
-                dbObjectLoaded.IsNew = false;
+                dbObject._oldValues = GetValues(dbObject);
 
-                dbObjectLoaded.IsDirty = false;
-            }
+                dbObject.ObjectState = ObjectState.Clean;
 
-            if (result is IDBEvent dbEventLoaded)
-            {
-                await dbEventLoaded.OnLoadedAsync(_dBAutomator).ConfigureAwait(false);
+                if (queryType == QueryType.Delete) dbObject.ObjectState = ObjectState.Deleted;
             }
         }
 
-        protected async Task<IEnumerable<C>> QueryAsync(string sql)
+        protected async Task<IEnumerable<C>> QueryAsync(QueryType queryType, string sql)
         {
             Stopwatch stopwatch = StopWatchStart();
 
@@ -88,12 +85,12 @@ namespace Dapper.SqlWriter
                 throw error;
             }
 
-            await PrepareResult(result).ConfigureAwait(false);
+            PrepareResults(queryType, result);
 
             return result;
         }
 
-        protected async Task<C> QueryFirstAsync(string sql)
+        protected async Task<C> QueryFirstAsync(QueryType queryType, string sql)
         {
             Stopwatch stopwatch = StopWatchStart();
 
@@ -118,16 +115,16 @@ namespace Dapper.SqlWriter
                 throw error;
             }
 
-            await PrepareResult(result).ConfigureAwait(false);
+            PrepareResult(queryType, result);
 
             return result;
         }
 
-        protected async Task<C> QueryFirstOrDefaultAsync(string sql)
+        protected async Task<C?> QueryFirstOrDefaultAsync(QueryType queryType, string sql)
         {
             Stopwatch stopwatch = StopWatchStart();
 
-            C result;
+            C? result;
 
             try
             {
@@ -149,12 +146,12 @@ namespace Dapper.SqlWriter
                 throw error;
             }
 
-            await PrepareResult(result).ConfigureAwait(false);
+            PrepareResult(queryType, result);
 
             return result;
         }
 
-        protected async Task<C> QuerySingleAsync(string sql)
+        protected async Task<C> QuerySingleAsync(QueryType queryType, string sql)
         {
             Stopwatch stopwatch = StopWatchStart();
 
@@ -179,16 +176,16 @@ namespace Dapper.SqlWriter
                 throw error;
             }
 
-            await PrepareResult(result).ConfigureAwait(false);
+            PrepareResult(queryType, result);
 
             return result;
         }
 
-        protected async Task<C> QuerySingleOrDefaultAsync(string sql)
+        protected async Task<C?> QuerySingleOrDefaultAsync(QueryType queryType, string sql)
         {
             Stopwatch stopwatch = StopWatchStart();
 
-            C result;
+            C? result;
 
             try
             {
@@ -209,9 +206,22 @@ namespace Dapper.SqlWriter
                 throw error;
             }
 
-            await PrepareResult(result).ConfigureAwait(false);
+            PrepareResult(queryType, result);
 
             return result;
+        }
+
+        //todo this method also exists in SqlWriter.cs
+        internal string GetValues<T>(T obj)
+        {
+            string result = string.Empty;
+
+            foreach (var prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped).OrderBy(p => p.PropertyName))
+            {
+                result = $"{result}{prop.Property.GetValue(obj, null)};";
+            }
+
+            return result[..^1];
         }
 
         private SqlWriterException GetException(Exception e) => new SqlWriterException("Error executing query.", e);

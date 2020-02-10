@@ -20,7 +20,7 @@ namespace Dapper.SqlWriter
 
         internal Delete(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -42,7 +42,7 @@ namespace Dapper.SqlWriter
 
         internal Delete(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -91,7 +91,7 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByItem()
         {
-            string sql = $"DELETE FROM \"{_registeredClass.TableName}\" WHERE";
+            string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" WHERE";
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
@@ -107,7 +107,7 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByExpression()
         {
-            string sql = $"DELETE FROM \"{_registeredClass.TableName}\" ";
+            string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" ";
 
             if (_whereExpressionParts.Count > 0)
             {
@@ -119,8 +119,17 @@ namespace Dapper.SqlWriter
             return $"{sql}RETURNING *;";
         }
 
-        public async Task<IEnumerable<C>> QueryAsync() => await QueryAsync(ToString()).ConfigureAwait(false);
+        public async Task<IEnumerable<C>> QueryAsync()
+        {
+            if (_item is IDBEvent dBEvent) _ = dBEvent.OnDeleteAsync(_sqlWriter);
 
-        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
+            var result = await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false);
+
+            if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(_sqlWriter);
+
+            return result;
+        }
+
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false)).ToList();
     }
 }

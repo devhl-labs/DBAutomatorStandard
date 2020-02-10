@@ -25,7 +25,7 @@ namespace Dapper.SqlWriter
 
         internal Update(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -53,7 +53,7 @@ namespace Dapper.SqlWriter
 
         internal Update(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _dBAutomator = dBAutomator;
+            _sqlWriter = dBAutomator;
 
             _queryOptions = queryOptions;
 
@@ -115,7 +115,7 @@ namespace Dapper.SqlWriter
         {
             if (_item == null) throw new SqlWriterException("The item cannot be null.", new NullReferenceException());
 
-            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_", ", ")} WHERE";
+            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_", ", ")} WHERE";
 
             if (_whereExpressionParts?.Count > 0)
             {
@@ -131,13 +131,22 @@ namespace Dapper.SqlWriter
             return $"{sql} RETURNING *;";
         }
 
-        public async Task<C> QueryFirstOrDefaultAsync() => await QueryFirstOrDefaultAsync(ToString());
+        public async Task<C> QueryFirstAsync()
+        {
+            if (_item is IDBEvent dBEvent) _ = dBEvent.OnUpdateAsync(_sqlWriter);
 
-        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(ToString()).ConfigureAwait(false)).ToList();
+            var result = await QueryFirstAsync(QueryType.Update, ToString());
+
+            if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnUpdatedAsync(_sqlWriter);
+
+            return result;
+        }
+
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false)).ToList();
 
         private string GetSqlByExpression()
         {
-            string sql = $"UPDATE \"{_registeredClass.TableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
+            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
 
             if (_whereExpressionParts.Count > 0)
             {

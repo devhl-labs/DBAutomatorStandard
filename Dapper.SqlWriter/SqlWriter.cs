@@ -60,7 +60,7 @@ namespace Dapper.SqlWriter
         {
             var item = Register<C>();
 
-            item.TableName = tableName;
+            item.DatabaseTableName = tableName;
 
             return item;            
         }
@@ -107,6 +107,33 @@ namespace Dapper.SqlWriter
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             return new Update<C>(registeredClass, this, Connection, QueryOptions, Logger);
+        }
+
+        internal string GetValues<C>(C obj)
+        {
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
+
+            string result = string.Empty;
+
+            foreach(var prop in registeredClass.RegisteredProperties.Where(p => !p.NotMapped).OrderBy(p => p.PropertyName))
+            {
+                result = $"{result}{prop.Property.GetValue(obj, null)};";
+            }
+
+            return result[..^1];
+        }
+
+        public ObjectState GetState<C>(C item) where C : DBObject<C>
+        {
+            if (item.ObjectState == ObjectState.Deleted) return ObjectState.Deleted;
+
+            if (item.ObjectState == ObjectState.New) return ObjectState.New;
+
+            if (item.ObjectState == ObjectState.Dirty) return ObjectState.Dirty;
+
+            if (item._oldValues != GetValues(item)) item.ObjectState = ObjectState.Dirty;
+
+            return item.ObjectState;
         }
     }
 }

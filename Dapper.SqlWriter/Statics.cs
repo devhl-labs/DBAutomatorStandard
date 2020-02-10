@@ -14,17 +14,17 @@ namespace Dapper.SqlWriter
 {
     internal static class Statics
     {
-        public static string GetOperator(this Enums.Comparison comparison)
+        public static string GetOperator(this Comparison comparison)
         {
-            if (comparison == Enums.Comparison.Equals) return "=";
+            if (comparison == Comparison.Equals) return "=";
 
-            if (comparison == Enums.Comparison.LessThan) return "<";
+            if (comparison == Comparison.LessThan) return "<";
 
-            if (comparison == Enums.Comparison.LessThanOrEqualTo) return "<=";
+            if (comparison == Comparison.LessThanOrEqualTo) return "<=";
 
-            if (comparison == Enums.Comparison.GreaterThan) return ">";
+            if (comparison == Comparison.GreaterThan) return ">";
 
-            if (comparison == Enums.Comparison.GreaterThanOrEqualTo) return ">=";
+            if (comparison == Comparison.GreaterThanOrEqualTo) return ">=";
 
             throw new SqlWriterException("Unhandled value", new ArgumentException());
         }
@@ -70,7 +70,7 @@ namespace Dapper.SqlWriter
             return b1;
         }
 
-        public static List<ExpressionPart> GetExpressionParts(BinaryExpression binaryExpression, List<ExpressionPart>? result = null)
+        public static List<ExpressionPart> GetExpressionParts(BinaryExpression binaryExpression, List<ExpressionPart>? result = null, string parameterPrefix = "w_")
         {
             result ??= new List<ExpressionPart>();
 
@@ -78,7 +78,11 @@ namespace Dapper.SqlWriter
 
             if (binaryExpression.Left is BinaryExpression b1)
             {
+                result.Add(new ExpressionPart { Parens = Parens.Left });
+
                 GetExpressionParts(b1, result);
+
+                result.Add(new ExpressionPart { Parens = Parens.Right});
             }
 
             if (binaryExpression.Left is BinaryExpression && binaryExpression.Right is BinaryExpression b2)
@@ -87,7 +91,11 @@ namespace Dapper.SqlWriter
 
                 result.Add(wherePart);
 
+                result.Add(new ExpressionPart { Parens = Parens.Left });
+
                 GetExpressionParts(b2, result);
+
+                result.Add(new ExpressionPart { Parens = Parens.Right });
 
                 return result;
             }
@@ -111,6 +119,8 @@ namespace Dapper.SqlWriter
             if (binaryExpression.Right is ConstantExpression c1)
             {
                 wherePart.ConstantExpression = c1;
+
+                wherePart.ConstantVariable = $"{parameterPrefix}{wherePart.MemberExpression.Member.Name}";
             }
             else
             {
@@ -190,6 +200,8 @@ namespace Dapper.SqlWriter
             {
                 RegisteredProperty<C>? registeredProperty = null;
 
+                if (expressionPart.Parens == Parens.Left) result = $"{result} ( ";
+
                 if (expressionPart.MemberExpression != null)
                 {
                     registeredProperty = GetRegisteredProperty(registeredClass, expressionPart.MemberExpression);
@@ -199,17 +211,32 @@ namespace Dapper.SqlWriter
 
                 if (expressionPart.MemberExpression != null && expressionPart.ConstantExpression?.Value == null)
                 {
-                    result = $"{result}IS NULL ";
+                    if (expressionPart.NodeType == ExpressionType.Equal)
+                    {
+                        result = $"{result}IS NULL ";
+                    }
+                    else if (expressionPart.NodeType == ExpressionType.NotEqual)
+                    {
+                        result = $"{result}IS NOT NULL ";
+                    }
+                    else
+                    {
+                        throw new SqlWriterException("Unhandled expression type", new ArgumentException());
+                    }                    
                 }
-                else
+                else if (expressionPart.NodeType != null)
                 {
                     result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
 
                     if (registeredProperty != null) result = $"{result}@{parameterPrefix}{registeredProperty.ColumnName} ";
                 }
+
+                if (expressionPart.Parens == Parens.Right) result = $"{result}) ";
             }
 
             result = result[..^1];
+
+            if (result.StartsWith(" ")) result = result[1..];
 
             return result;
         }
@@ -234,7 +261,7 @@ namespace Dapper.SqlWriter
             return registeredProperty;
         }
 
-        public static string ToSqlSymbol(this ExpressionType expressionType) =>
+        public static string ToSqlSymbol(this ExpressionType? expressionType) =>
             expressionType switch
             {
                 ExpressionType.Equal => "=",
