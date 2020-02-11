@@ -43,7 +43,7 @@ The Register method returns a RegisteredClass object.  Use this object to config
 Your classes can optionally implement the IDBEvent interface.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
 ## Change Tracking
-Your classes can inherit the abstract DBObject class.  The library will then track changes to your objects and call the save method on your class.
+Your classes can inherit the abstract DBObject class.  The library will then track changes to your objects and you can then call the save method on your class.
 
 ## Compatibility
 This library was tested with Postgres, though Dapper supports more RDMSs.  If a property must be converted or processed before sending it to the database, set the RegisteredProperty's ToDatabaseColumn function to one of your own functions.  The output of which should be a type that can be inserted into your table.  See the test program for more details and other ways to use this library. 
