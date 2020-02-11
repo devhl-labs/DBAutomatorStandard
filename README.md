@@ -8,40 +8,42 @@ QueryOptions queryOptions = new QueryOptions();
 
 queryOptions.ConnectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";
 
-SqlWriter postgres = new SqlWriter(queryOptions, logService);
+SqlWriter sqlWriter = new SqlWriter(queryOptions, logService);
 
-postgres.Register<UserModel>();
-postgres.Register<AddressModel>();
-postgres.Register<UserAddressModel>();
+sqlWriter.Register<UserModel>();
+
 ```
  
 Now you can save and retrieve your objects using Linq.  
 ```csharp
 //delete all rows in the table
-var a = await postgres.Delete<UserModel>().QueryAsync();
+var a = await sqlWriter.Delete<UserModel>().QueryAsync();
 
 //insert a new row
-var b = await postgres.Insert(newUser1).QuerySingleOrDefaultAsync();
+var b = await sqlWriter.Insert(newUser1).QueryFirstAsync();
 
 //update an existing row
-newUser1.UserName = "changed";
-var h = await postgres.Update(newUser1).QuerySingleOrDefaultAsync();
+newUser1.UserName = "Alice";
+var h = await sqlWriter.Update(newUser1).QueryFirstAsync();
 
 //update all matching rows
-var i = await postgres.Update<UserModel>().Set(u => u.UserName == "changed again").Where(u => u.UserName == "changed").QueryAsync();
+var i = await sqlWriter.Update<UserModel>().Set(u => u.UserName == "Bob").Where(u => u.UserName == "Alice").QueryAsync();
 
 //get the required rows
-var j = await postgres.Select<UserModel>().Where(u => u.UserID > 2).QueryAsync();
-var n = await postgres.Select<UserModel>().Where(u => u.UserID == 2).QueryAsync();
-var o = await postgres.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "changed again").QueryAsync();
-var p = await postgres.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "changed again").OrderBy(u => u.UserID).QueryAsync();
+var j = await sqlWriter.Select<UserModel>().Where(u => u.UserID > 2).QueryAsync();
+var n = await sqlWriter.Select<UserModel>().Where(u => u.UserID == 2).QueryAsync();
+var o = await sqlWriter.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "Bob").QueryAsync();
+var p = await sqlWriter.Select<UserModel>().Where(u => u.UserID == 2 || u.UserName == "Bob").OrderBy(u => u.UserID).QueryAsync();
 ```
 
 ## Configuring Your Classes
-The Register method returns a RegisteredClass object.  You may edit the TableName and ColumnName properties to point your class to the property database object.  You may also decorate your class with attributes.  This library uses five attributes: Key, NotMapped, TableName, ColumnName, and AutoIncrement.  The library will also work with views so you can easily get joins working.  
+The Register method returns a RegisteredClass object.  Use this object to configure table names, columns names, primary keys, and database generated columns.  You may also decorate your class with attributes.  This library uses five attributes: Key, NotMapped, TableName, ColumnName, and AutoIncrement.  The library will also work with views so you can easily get joins working.  
 
 ## Callbacks
-Your classes can optionally implement the IDBObject or IDBEvent interfaces, or inherit the DBObject class.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
+Your classes can optionally implement the IDBEvent interface.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
+
+## Change Tracking
+Your classes can inherit the abstract DBObject class.  The library will then track changes to your objects and call the save method on your class.
 
 ## Compatibility
-This library was tested with Postgres.  If this library struggles to insert your data type into your database, set the RegisteredProperty's ToDatabaseColumn function to one of your own functions.  The output of which should be a type that can be inserted into your table.  See the test program for more details and other ways to use this library. 
+This library was tested with Postgres, though Dapper supports more RDMSs.  If a property must be converted or processed before sending it to the database, set the RegisteredProperty's ToDatabaseColumn function to one of your own functions.  The output of which should be a type that can be inserted into your table.  See the test program for more details and other ways to use this library. 
