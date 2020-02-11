@@ -14,7 +14,7 @@ namespace Dapper.SqlWriter
 
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
-        public string ColumnName { get; set; } = string.Empty;
+        public string ColumnName { get; internal set; } = string.Empty;
 
         public string PropertyName { get; set; } = string.Empty;
 
@@ -29,7 +29,22 @@ namespace Dapper.SqlWriter
         /// </summary>
         public Func<RegisteredProperty<C>, object, object?> ToDatabaseColumn { get; set; } = DefaultToDatabaseColumn;
 
-        public override string ToString() => PropertyName;
+        public override string ToString() => ToString("w_");
+
+        public string ToString(string parameterPrefix) => $"\"{ColumnName}\" = @{parameterPrefix}{ColumnName}";
+
+        public string ToSqlInjectionString(C item)
+        {
+            if (PropertyType.GetType() == typeof(string))
+            {
+                return $"\"{ColumnName}\" = '{Property.GetValue(item, null)}'";
+            }
+            else
+            {
+                return $"\"{ColumnName}\" = {Property.GetValue(item, null)}";
+            }
+
+        }
 
         public static object DefaultToDatabaseColumn(RegisteredProperty<C> registeredProperty, object value) => value;
     }

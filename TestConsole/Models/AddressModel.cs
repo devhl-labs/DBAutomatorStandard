@@ -10,9 +10,9 @@ namespace TestDatabaseLibrary
 		public ulong AddressID { get; set; }
 		
 		public ulong UserID { get; set; }
-		
+
 		[Column("Address")]
-		public string UserAddress { get; set; }
+		public string UserAddress { get; set; } = string.Empty;
 	}
 
 

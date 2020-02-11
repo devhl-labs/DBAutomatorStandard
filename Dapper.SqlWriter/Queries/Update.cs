@@ -18,10 +18,10 @@ namespace Dapper.SqlWriter
         private readonly C? _item = null;
 
 
-        private List<ExpressionPart> _setExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _setExpressionParts = new List<ExpressionPart<C>>();
         
 
-        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
         internal Update(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
@@ -40,7 +40,7 @@ namespace Dapper.SqlWriter
             Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_");
 
             Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement && p.IsKey));
-
+            
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey && p.IsAutoIncrement))
             {
                 Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey && p.IsAutoIncrement));
@@ -64,22 +64,22 @@ namespace Dapper.SqlWriter
             _connection = connection;
         }
 
-        public Update<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
+        public Update<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
-
-            _logger = logger;
 
             return this;
         }
 
         public Update<C> Set(Expression<Func<C, object>> set)
         {
+            if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
+    
             set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(set);
 
-            _setExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            _setExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass, null, "s_");
 
             Statics.AddParameters(_p, _registeredClass, _setExpressionParts, "s_");
 
@@ -88,11 +88,13 @@ namespace Dapper.SqlWriter
 
         public Update<C> Where(Expression<Func<C, object>> where)
         {
+            if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
+
             where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass);
 
             Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
@@ -111,22 +113,70 @@ namespace Dapper.SqlWriter
             }
         }
 
-        private string GetSqlByItem()
+        public string ToSqlInjectionString()
+        {
+            if (_item == null)
+            {
+                return GetSqlByExpression(true);
+            }
+            else
+            {
+                return GetSqlByItem(true);
+            }
+        }
+
+        private string GetSqlByItem(bool allowSqlInjection = false)
         {
             if (_item == null) throw new SqlWriterException("The item cannot be null.", new NullReferenceException());
 
-            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_", ", ")} WHERE";
+            //string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_", ", ")} WHERE";
+
+            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET ";
+
+            if (allowSqlInjection)
+            {
+                foreach (var prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql} {prop.ToSqlInjectionString(_item)}, ";
+            }
+            else
+            {
+                foreach (var prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql} {prop.ToString("s_")}, ";
+            }
+
+            if (sql.EndsWith(", ")) sql = sql[..^2];
+
+            sql = $"{sql} WHERE";
 
             if (_whereExpressionParts?.Count > 0)
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+                //sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+
+                if (allowSqlInjection)
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                }
+                else
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                }
+
             }
             else
             {
                 if (_registeredClass.RegisteredProperties.Count(p => !p.NotMapped && p.IsKey) == 0) throw new SqlWriterException("The item does not have a key registered nor a where clause.", new ArgumentException());
 
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey), delimiter: " AND")}";
+                //sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey), delimiter: " AND")}";
+
+                if (allowSqlInjection)
+                {
+                    foreach (var prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey)) sql = $"{sql} {prop.ToSqlInjectionString(_item)} AND";
+                }
+                else
+                {
+                    foreach (var prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey)) sql = $"{sql} {prop.ToString()} AND";
+                }
             }
+
+            if (sql.EndsWith("AND")) sql = sql[..^3];
 
             return $"{sql} RETURNING *;";
         }
@@ -144,13 +194,35 @@ namespace Dapper.SqlWriter
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false)).ToList();
 
-        private string GetSqlByExpression()
+        private string GetSqlByExpression(bool allowSqlInjection = false)
         {
-            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
+            //string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
+
+            string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET";
+
+            if (allowSqlInjection)
+            {
+                foreach (var set in _setExpressionParts) sql = $"{sql} {set.ToSqlInjectionString()}";
+            }
+            else
+            {
+                foreach (var set in _setExpressionParts) sql = $"{sql} {set.ToString()}"; 
+            }
 
             if (_whereExpressionParts.Count > 0)
             {
-                sql = $"{sql} WHERE {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
+                //sql = $"{sql} WHERE {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
+
+                sql = $"{sql} WHERE";
+
+                if (allowSqlInjection)
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                }
+                else
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                }
             }
 
             return $"{sql} RETURNING *;";

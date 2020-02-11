@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Dapper.SqlWriter\Dapper.SqlWriter.csproj" />
-    <ProjectReference Include="..\TestDatabaseLibrary\TestDatabaseLibrary.csproj" />
   </ItemGroup>
 
 </Project>

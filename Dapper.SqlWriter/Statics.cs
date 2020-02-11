@@ -29,17 +29,23 @@ namespace Dapper.SqlWriter
             throw new SqlWriterException("Unhandled value", new ArgumentException());
         }
 
-        public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart>? expressionParts, string parameterPrefix = "w_")
+        public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? expressionParts, string parameterPrefix = "w_")
         {
             if (expressionParts == null) return;
+
+            int i = 0;
 
             foreach(var expression in expressionParts)
             {
                 if (expression.ConstantExpression == null || expression.MemberExpression == null) continue;
 
-                RegisteredProperty<C> registeredProperty = GetRegisteredProperty(registeredClass, expression.MemberExpression);             
+                RegisteredProperty<C> registeredProperty = GetRegisteredProperty(registeredClass, expression.MemberExpression);
 
-                string parameterName = $"@{parameterPrefix}{registeredProperty.PropertyName}";
+                string parameterName = $"@{parameterPrefix}{i}";
+
+                expression.ParameterName = i;
+
+                i++;
 
                 p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, expression.ConstantExpression.Value));
             }
@@ -51,11 +57,11 @@ namespace Dapper.SqlWriter
         {
             if (item == null) throw new SqlWriterException("The item cannot be null.", new ArgumentNullException("item"));
 
-            foreach (var registeredProperty in registeredProperties) //moved the where clause to higher
+            foreach (var registeredProperty in registeredProperties)
             {
-                string parameterName = $"@{parameterPrefix}{registeredProperty.PropertyName}";
+                string parameterName = $"@{parameterPrefix}{registeredProperty.ColumnName}";
 
-                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, typeof(C).GetProperty(registeredProperty.PropertyName).GetValue(item, null)));
+                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, registeredProperty.Property.GetValue(item, null)));
             }
         }
 
@@ -70,19 +76,19 @@ namespace Dapper.SqlWriter
             return b1;
         }
 
-        public static List<ExpressionPart> GetExpressionParts(BinaryExpression binaryExpression, List<ExpressionPart>? result = null, string parameterPrefix = "w_")
+        public static List<ExpressionPart<C>> GetExpressionParts<C>(BinaryExpression binaryExpression, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? result = null, string parameterPrefix = "w_")
         {
-            result ??= new List<ExpressionPart>();
+            result ??= new List<ExpressionPart<C>>();
 
-            ExpressionPart wherePart = new ExpressionPart();
+            ExpressionPart<C> wherePart = new ExpressionPart<C>();
 
             if (binaryExpression.Left is BinaryExpression b1)
             {
-                result.Add(new ExpressionPart { Parens = Parens.Left });
+                result.Add(new ExpressionPart<C> { Parens = Parens.Left });
 
-                GetExpressionParts(b1, result);
+                GetExpressionParts(b1, registeredClass, result);
 
-                result.Add(new ExpressionPart { Parens = Parens.Right});
+                result.Add(new ExpressionPart<C> { Parens = Parens.Right});
             }
 
             if (binaryExpression.Left is BinaryExpression && binaryExpression.Right is BinaryExpression b2)
@@ -91,11 +97,11 @@ namespace Dapper.SqlWriter
 
                 result.Add(wherePart);
 
-                result.Add(new ExpressionPart { Parens = Parens.Left });
+                result.Add(new ExpressionPart<C> { Parens = Parens.Left });
 
-                GetExpressionParts(b2, result);
+                GetExpressionParts(b2, registeredClass, result);
 
-                result.Add(new ExpressionPart { Parens = Parens.Right });
+                result.Add(new ExpressionPart<C> { Parens = Parens.Right });
 
                 return result;
             }
@@ -116,11 +122,15 @@ namespace Dapper.SqlWriter
                 throw new SqlWriterException("Unsupported expression", new ArgumentException());
             }
 
-            if (binaryExpression.Right is ConstantExpression c1)
+            if (binaryExpression.Right is ConstantExpression c1 && wherePart.MemberExpression != null)
             {
                 wherePart.ConstantExpression = c1;
 
-                wherePart.ConstantVariable = $"{parameterPrefix}{wherePart.MemberExpression.Member.Name}";
+                wherePart.ConstantVariable = $"{registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name).ColumnName}";
+
+                wherePart.Prefix = parameterPrefix;
+
+                wherePart.RegisteredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name);
             }
             else
             {
@@ -163,84 +173,6 @@ namespace Dapper.SqlWriter
             return false;
         }
 
-        /// <summary>
-        /// "ColumnName" = @w_ColumnName
-        /// </summary>
-        /// <typeparam name="C"></typeparam>
-        /// <param name="registeredClass"></param>
-        /// <param name="parameterPrefix"></param>
-        /// <returns></returns>
-        public static string ToColumnNameEqualsParameterName<C>(IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_", string delimiter = "")
-        {
-            string result = string.Empty;
-
-            foreach(RegisteredProperty<C> registeredProperty in registeredProperties)
-            {
-                result = $"{result} \"{registeredProperty.ColumnName}\" = @{parameterPrefix}{registeredProperty.ColumnName}{delimiter}";
-            }
-
-            if (result.EndsWith(delimiter)) result = result[..^delimiter.Length];
-
-            //return result[..^1];
-
-            return result;
-        }
-
-        /// <summary>
-        /// MemberExpression.Member.Name =&#60;&#62; @w_MemberExpression.Member.Name
-        /// </summary>
-        /// <param name="expressionParts"></param>
-        /// <param name="parameterPrefix"></param>
-        /// <returns></returns>
-        public static string ToColumnNameEqualsParameterName<C>(RegisteredClass<C> registeredClass, List<ExpressionPart> expressionParts, string parameterPrefix = "w_")
-        {
-            string result = string.Empty;
-
-            foreach (ExpressionPart expressionPart in expressionParts)
-            {
-                RegisteredProperty<C>? registeredProperty = null;
-
-                if (expressionPart.Parens == Parens.Left) result = $"{result} ( ";
-
-                if (expressionPart.MemberExpression != null)
-                {
-                    registeredProperty = GetRegisteredProperty(registeredClass, expressionPart.MemberExpression);
-                }                
-
-                if (registeredProperty != null) result = $"{result} \"{registeredProperty.ColumnName}\" ";
-
-                if (expressionPart.MemberExpression != null && expressionPart.ConstantExpression?.Value == null)
-                {
-                    if (expressionPart.NodeType == ExpressionType.Equal)
-                    {
-                        result = $"{result}IS NULL ";
-                    }
-                    else if (expressionPart.NodeType == ExpressionType.NotEqual)
-                    {
-                        result = $"{result}IS NOT NULL ";
-                    }
-                    else
-                    {
-                        throw new SqlWriterException("Unhandled expression type", new ArgumentException());
-                    }                    
-                }
-                else if (expressionPart.NodeType != null)
-                {
-                    result = $"{result}{expressionPart.NodeType.ToSqlSymbol()} ";
-
-                    if (registeredProperty != null) result = $"{result}@{parameterPrefix}{registeredProperty.ColumnName} ";
-                }
-
-                if (expressionPart.Parens == Parens.Right) result = $"{result}) ";
-            }
-
-            result = result[..^1];
-
-            if (result.StartsWith(" ")) result = result[1..];
-
-            return result;
-        }
-
         public static RegisteredProperty<C> GetRegisteredProperty<C>(RegisteredClass<C> registeredClass, MemberExpression expression)
         {
             RegisteredProperty<C> registeredProperty;
@@ -280,10 +212,7 @@ namespace Dapper.SqlWriter
         {
             MemberExpression? member = key.Body as MemberExpression;
 
-            if (key.Body is UnaryExpression unaryExpression)
-            {
-                member = unaryExpression.Operand as MemberExpression;
-            }
+            if (key.Body is UnaryExpression unaryExpression) member = unaryExpression.Operand as MemberExpression;
 
             if (member?.Member.Name == "Value" && member.Expression is MemberExpression member1) member = member1;
 

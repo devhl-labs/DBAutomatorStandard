@@ -24,23 +24,38 @@ namespace Dapper.SqlWriter
 
             _connection = connection;
 
-            if (item == null) throw new SqlWriterException("Item must not be null.", new ArgumentException());
-
-            _item = item;
+            _item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
 
             Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
-        public Insert<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
+        public Insert<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
-
-            _logger = logger;
 
             return this;
         }
 
-        public override string ToString()
+        public string ToSqlInjectionString() => GetString(true);
+
+        public override string ToString() => GetString();
+        //{
+        //    string sql = $"INSERT INTO \"{_registeredClass.DatabaseTableName}\" (";
+
+        //    foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
+
+        //    sql = sql[0..^2];
+
+        //    sql = $"{sql}) VALUES (";
+
+        //    foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
+
+        //    sql = sql[0..^2];
+
+        //    return $"{sql}) RETURNING *;";
+        //}
+
+        private string GetString(bool allowSqlInjection = false)
         {
             string sql = $"INSERT INTO \"{_registeredClass.DatabaseTableName}\" (";
 
@@ -50,11 +65,30 @@ namespace Dapper.SqlWriter
 
             sql = $"{sql}) VALUES (";
 
-            foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
+            if (allowSqlInjection)
+            {
+                foreach (RegisteredProperty<C> registeredProperty in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement))
+                {
+                    if (registeredProperty.PropertyType.GetType() == typeof(string))
+                    {
+                        sql = $"{sql}'{registeredProperty.Property.GetValue(_item, null)}', ";
+                    }
+                    else
+                    {
+                        sql = $"{sql}{registeredProperty.Property.GetValue(_item, null)}, ";
+                    }
+                }
+            }
+            else
+            {
+                foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
+            }
 
             sql = sql[0..^2];
 
-            return $"{sql}) RETURNING *;";
+            sql = $"{sql}) RETURNING *;";
+
+            return sql;
         }
 
         public async Task<C> QueryFirstAsync()

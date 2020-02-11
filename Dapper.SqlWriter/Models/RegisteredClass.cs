@@ -110,25 +110,21 @@ namespace Dapper.SqlWriter
             return this;
         }
 
-        public RegisteredClass<C> ColumnName(Expression<Func<C, object>> key)
+        private ColumnMap? _columnMap = null;
+
+        public RegisteredClass<C> ColumnName(Expression<Func<C, object>> key, string columnName)
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            UnaryExpression? unaryExpression = key.Body as UnaryExpression;
+            MemberExpression member = Statics.GetMemberExpression(key);
 
-            BinaryExpression? binaryExpression = unaryExpression?.Operand as BinaryExpression;
+            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).ColumnName = columnName;
 
-            MemberExpression? member = binaryExpression?.Left as MemberExpression;
+            _columnMap ??= new ColumnMap();
 
-            member ??= binaryExpression?.Right as MemberExpression;
+            _columnMap.Add(member.Member.Name, columnName);
 
-            ConstantExpression? constant = binaryExpression?.Right as ConstantExpression;
-
-            constant ??= binaryExpression?.Left as ConstantExpression;
-
-            if (member == null || constant == null) throw new SqlWriterException("Unhandled expression type", new ArgumentException());
-
-            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).ColumnName = constant.Value.ToString();
+            SqlMapper.SetTypeMap(typeof(C), new CustomPropertyTypeMap(typeof(C), (type, columnName) => type.GetProperty(_columnMap[columnName])));
 
             return this;
         }

@@ -9,12 +9,12 @@ namespace TestDatabaseLibrary
         public ulong UserID { get; set; }
 
         [Column("UserNames")]
-        public string UserName { get; set; }
+        public string UserName { get; set; } = string.Empty;
 
-        public NotMappedClass NotMappedClass { get; set; }
+        public NotMappedClass NotMappedClass { get; set; } = new NotMappedClass();
 
         [NotMapped]
-        public string NotMappedProperty { get; set; }
+        public string NotMappedProperty { get; set; } = string.Empty;
 
         [NotMapped]
         public bool IsNewRecord { get; set; } = true;
@@ -29,7 +29,7 @@ namespace TestDatabaseLibrary
         public ulong AddressID { get; set; }
 
         [Column("Address")]
-        public string UserAddress { get; set; }
+        public string UserAddress { get; set; } = string.Empty;
     }
 
 

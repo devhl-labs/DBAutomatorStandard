@@ -5,8 +5,10 @@ using System.Text;
 
 namespace Dapper.SqlWriter.Models
 {
-    public class ExpressionPart
+    public class ExpressionPart<C>
     {
+        public RegisteredProperty<C>? RegisteredProperty { get; set; } = null;
+
         public MemberExpression? MemberExpression { get; set; } = null;
 
         public ExpressionType? NodeType { get; set; } = null;
@@ -17,25 +19,31 @@ namespace Dapper.SqlWriter.Models
 
         public Parens? Parens { get; set; } = null;
 
-        public override string ToString()
-        {
-            string? result = ToPartialString();
+        public string? Prefix { get; set; } = null;
 
-            if (result != null) return result;
+        public int? ParameterName { get; set; } = null;
 
-            return $"\"{MemberExpression.Member.Name}\" {NodeType.ToSqlSymbol()} @{ConstantVariable}";
-        }
+        public override string ToString() => GetString() ?? $"\"{RegisteredProperty.ColumnName}\" {NodeType.ToSqlSymbol()} @{Prefix}{ParameterName}";
 
         public string ToSqlInjectionString()
         {
-            string? result = ToPartialString();
+            string? result = GetString();
 
             if (result != null) return result;
 
-            return $"\"{MemberExpression.Member.Name}\" {NodeType.ToSqlSymbol()} '{ConstantExpression.Value}'";
+            object value = RegisteredProperty.ToDatabaseColumn(RegisteredProperty, ConstantExpression.Value);
+
+            if (value.GetType() == typeof(string))
+            {
+                return $"\"{RegisteredProperty.ColumnName}\" {NodeType.ToSqlSymbol()} '{value}'";
+            }
+            else
+            {
+                return $"\"{RegisteredProperty.ColumnName}\" {NodeType.ToSqlSymbol()} {value}";
+            }
         }
 
-        private string? ToPartialString()
+        private string? GetString()
         {
             if (Parens == Dapper.SqlWriter.Parens.Left) return "(";
 

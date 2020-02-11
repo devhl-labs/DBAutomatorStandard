@@ -15,7 +15,7 @@ namespace Dapper.SqlWriter
 {
     public class Select<C> : BaseQuery<C> where C : class
     {
-        private readonly List<ExpressionPart> _selectExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _selectExpressionParts = new List<ExpressionPart<C>>();
 
         private int? _top = null;
 
@@ -27,12 +27,12 @@ namespace Dapper.SqlWriter
 
         private int? _rowNum = null;
 
-        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
 
-        private List<ExpressionPart> _orderByExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _orderByExpressionParts = new List<ExpressionPart<C>>();
 
-        internal Select(Expression<Func<C, object>>? select, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Select(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -44,20 +44,34 @@ namespace Dapper.SqlWriter
 
             _connection = connection;
 
-            if (select == null) return;
+            //if (select == null) return;
 
-            select = PartialEvaluator.PartialEvalBody(select, ExpressionInterpreter.Instance);
+            //select = PartialEvaluator.PartialEvalBody(select, ExpressionInterpreter.Instance);
 
-            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(select);
+            //BinaryExpression? binaryExpression = Statics.GetBinaryExpression(select);
 
-            _selectExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            //_selectExpressionParts = Statics.GetExpressionParts(binaryExpression);
         }
 
-        public Select<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
+        public Select<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
 
-            _logger = logger;
+            return this;
+        }
+
+        public Select<C> Column(Expression<Func<C, object>> column)
+        {
+            //todo this has to be tested still
+
+            column = PartialEvaluator.PartialEvalBody(column, ExpressionInterpreter.Instance);
+
+            ExpressionPart<C> part = new ExpressionPart<C>
+            {
+                MemberExpression = Statics.GetMemberExpression(column)
+            };
+
+            _selectExpressionParts.Add(part);
 
             return this;
         }
@@ -68,7 +82,7 @@ namespace Dapper.SqlWriter
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass);
 
             Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
@@ -102,9 +116,9 @@ namespace Dapper.SqlWriter
 
             orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
 
-            _orderByExpressionParts ??= new List<ExpressionPart>();
+            _orderByExpressionParts ??= new List<ExpressionPart<C>>();
 
-            ExpressionPart part = new ExpressionPart
+            ExpressionPart<C> part = new ExpressionPart<C>
             {
                 MemberExpression = Statics.GetMemberExpression(orderBy)
             };
@@ -169,7 +183,11 @@ namespace Dapper.SqlWriter
             return this;
         }
 
-        public override string ToString()
+        public string ToSqlInjectionString() => GetString(true);
+
+        public override string ToString() => GetString();
+
+        public string GetString(bool allowSqlInjection = false)
         {
             string sql = $"SELECT";
 
@@ -191,7 +209,7 @@ namespace Dapper.SqlWriter
             }
             else
             {
-                foreach(var expression in _selectExpressionParts.Where(e => e.MemberExpression != null))
+                foreach (var expression in _selectExpressionParts.Where(e => e.MemberExpression != null))
                 {
                     RegisteredProperty<C> registeredProperty = Statics.GetRegisteredProperty(_registeredClass, expression.MemberExpression!);
 
@@ -211,14 +229,21 @@ namespace Dapper.SqlWriter
 
                 if (_rowNum != null) sql = $"{sql} ROWNUM {_comparison.GetOperator()} {_rowNum}";
 
-                sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)}";
+                if (allowSqlInjection)
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                }
+                else
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                }
             }
 
             if (_orderByExpressionParts.Count > 0)
             {
                 sql = $"{sql} ORDER BY";
 
-                foreach(var expressionPart in _orderByExpressionParts)
+                foreach (var expressionPart in _orderByExpressionParts)
                 {
                     RegisteredProperty<C> registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
 

@@ -16,38 +16,15 @@ namespace TestConsole
     {
 #nullable disable
 
-        public static SqlWriter Postgres { get; set; }
+        public static SqlWriter SqlWriter { get; set; }
 
 #nullable enable
 
         public static async Task Main()
         {
-            ILogger logService = new LogService();
+            SqlWriter = ConfigureSqlWriter();
 
-            string password = File.ReadAllText(@"E:\Desktop\password.txt");
-
-            QueryOptions queryOptions = new QueryOptions();
-
-            string connectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";           
-
-            IDbConnection connection = new NpgsqlConnection(connectionString);
-
-            Postgres = new SqlWriter(connection, queryOptions, logService);
-
-            var userModel = Postgres.Register<UserModel>();
-
-            var p = userModel.RegisteredProperty(p => p.UserID!);
-
-            p.ToDatabaseColumn = NullableULongToDatabaseColumn;
-
-            Postgres.Register<AddressModel>();
-
-            Postgres.Register<UserAddressModel>();
-
-            //delete all rows
-            var a = await Postgres.Delete<UserModel>().QueryAsync();
-
-            await InsertNewRows();
+            ConfigureClasses();
 
             await TestUsingConstants();
 
@@ -60,123 +37,220 @@ namespace TestConsole
             Console.ReadLine();
         }
 
+        public static SqlWriter ConfigureSqlWriter()
+        {
+            ILogger logService = new LogService();
+
+            string password = File.ReadAllText(@"E:\Desktop\password.txt");
+
+            QueryOptions queryOptions = new QueryOptions();
+
+            string connectionString = $"Server=127.0.0.1;Port=5432;Database=AutomatorTest;User ID=postgres;Password={password};";           
+
+            IDbConnection connection = new NpgsqlConnection(connectionString);
+
+            return new SqlWriter(connection, queryOptions, logService);
+        }
+
+        public static void ConfigureClasses()
+        {
+            var userModel = SqlWriter.Register<UserModel>().Key(u => u.UserID).NotMapped(u => u.NotMappedProperty).ColumnName(u => u.SomeLongNumber!, "SomeBigInt");
+
+            userModel.RegisteredProperty(p => p.UserID!).ToDatabaseColumn = NullableULongToDatabaseColumn;
+
+            userModel.RegisteredProperty(p => p.SomeLongNumber!).ToDatabaseColumn = NullableULongToDatabaseColumn;
+        }
+
         private static async Task InsertNewRows()
         {
             UserModel newUser1 = new UserModel
             {
                 UserID = 1,
-                UserNames = "a"
+                FirstName = "Adam",
+                LastName = "Warlock",
+                NotMappedProperty = "not mapped property",
+                UserType = UserType.User
             };
+
             UserModel newUser2 = new UserModel
             {
                 UserID = 2,
-                UserNames = "b"
+                FirstName = "Bucky",
+                LastName = "Barnes",
+                NotMappedProperty = "abcdef",
+                UserType = UserType.User
             };
             UserModel newUser3 = new UserModel
             {
                 UserID = 3,
-                UserNames = "c"
+                FirstName = "Chalie",
+                LastName = "Cox",
+                //NotMappedProperty = "not mapped property",
+                UserType = UserType.Admin,
+                SomeLongNumber = 1
             };
             UserModel newUser4 = new UserModel
             {
                 UserID = 4,
-                UserNames = "d"
+                FirstName = "Dexter",
+                LastName = "Morgan",
+                NotMappedProperty = "some value",
+                UserType = UserType.Admin,
+                SomeLongNumber = 1000
             };
+
             UserModel newUser5 = new UserModel
             {
                 UserID = 5,
-                UserNames = "e"
+                FirstName = "Debra",
+                LastName = "Morgan",
+                NotMappedProperty = "not mapped property",
+                UserType = UserType.Admin,
+                SomeLongNumber = 1000
             };
+
             UserModel newUser6 = new UserModel
             {
                 UserID = 6,
-                UserNames = "f"
+                FirstName = "Electra",
+                LastName = "Natchios",
+                //NotMappedProperty = "not mapped property",
+                UserType = UserType.User
+            };
+            UserModel newUser7 = new UserModel
+            {
+                UserID = 7,
+                FirstName = "Fool",
+                LastName = "Killer",
+                NotMappedProperty = "not mapped property",
+                UserType = UserType.User
             };
 
-            var b = await Postgres.Insert(newUser1).QueryFirstOrDefaultAsync();
+            var b = await SqlWriter.Insert(newUser1).QueryFirstAsync();
 
-            var c = await Postgres.Insert(newUser2).QueryFirstOrDefaultAsync();
+            var c = await SqlWriter.Insert(newUser2).QueryFirstAsync();
 
-            var d = await Postgres.Insert(newUser3).QueryFirstOrDefaultAsync();
+            var d = await SqlWriter.Insert(newUser3).QueryFirstAsync();
 
-            var e = await Postgres.Insert(newUser4).QueryFirstOrDefaultAsync();
+            var e = await SqlWriter.Insert(newUser4).QueryFirstAsync();
 
-            var f = await Postgres.Insert(newUser5).QueryFirstOrDefaultAsync();
+            var f = await SqlWriter.Insert(newUser5).QueryFirstAsync();
 
-            var g = await Postgres.Insert(newUser6).QueryFirstOrDefaultAsync();
+            var g = await SqlWriter.Insert(newUser6).QueryFirstAsync();
+
+            var h = await SqlWriter.Insert(newUser7).QueryFirstAsync();
         }
 
         private static async Task TestUsingConstants()
         {
-            var a = await Postgres.Select<UserModel>().Where(u => u.UserNames == "a").QueryAsync();
+            var a = await SqlWriter.Delete<UserModel>().QueryAsync();
 
-            var b = await Postgres.Update<UserModel>().Where(u => u.UserNames == "z").Set(u => u.UserNames == "a").QueryFirstOrDefaultAsync();
+            await InsertNewRows();
 
-            var c = await Postgres.Delete<UserModel>().Where(u => u.UserNames == "z").QueryAsync();
+            var b = await SqlWriter.Select<UserModel>().QueryAsync();
 
-            var d = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 1).QueryAsync();
+            var c = await SqlWriter.Select<UserModel>().Limit(2).Where(u => u.UserType == UserType.User).QueryAsync();
 
-            var e = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 3 || u.UserNames == "b").QueryAsync();
+            var d = await SqlWriter.Select<UserModel>().Where(u => u.FirstName == "Adam").QueryFirstAsync();
 
-            var f = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value > 4 && u.UserNames == "e").QueryAsync();
+            var e = await SqlWriter.Select<UserModel>().Where(u => u.UserType == UserType.Admin && u.SomeLongNumber == 1000 && (u.FirstName == "Debra" || u.FirstName == "Dexter")).QueryAsync();
 
-            var g = await Postgres.Select<UserModel>().Where(u => u.UserID!.Value == 1 && u.UserNames == "f" || u.UserType > UserType.User).QueryAsync();
+            var f = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > 0).QueryAsync();
+
+            var g = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > 0 || (u.FirstName == "Adam" && u.LastName == "Warlock") || u.FirstName == "Fool").QueryAsync();
+
+            d.SomeLongNumber = 9000;
+
+            var h = await SqlWriter.Update(d).QueryFirstAsync();
+
+            var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == 42).Where(u => u.FirstName == "Dexter" && u.LastName == "Morgan").QueryFirstAsync();
         }
 
         private static async Task TestUsingVariableClosure()
         {
-            var b = "b";
+            int zero = 0;
 
-            var z = "z";
+            int one = 1;
 
-            var d = "f";
+            int two = 2;
 
-            ulong k = 1;
+            int fortytwo = 42;
 
-            ulong l = 3;
+            long onethousand = 1000;
 
-            ulong m = 4;
+            long ninethousand = 9000;
 
-            UserType userType = UserType.Admin;
+            string adam = "Adam";
 
-            var e = await Postgres.Select<UserModel>().Where(u => u.UserNames == b).QueryAsync();
+            string warlock = "Warlock";
 
-            var f = await Postgres.Update<UserModel>().Set(u => u.UserNames == z).Where(u => u.UserNames == b).QueryFirstOrDefaultAsync();
+            string debra = "Debra";
 
-            var g = await Postgres.Delete<UserModel>().Where(u => u.UserNames == b).QueryAsync();
+            string dexter = "Dexter";
 
-            var h = await Postgres.Select<UserModel>().Where(u => u.UserID > k).QueryAsync();
+            string morgan = "Morgan";
 
-            var i = await Postgres.Select<UserModel>().Where(u => u.UserID > l || u.UserNames == z).QueryAsync();
+            string fool = "Fool";
 
-            var j = await Postgres.Select<UserModel>().Where(u => u.UserID > m && u.UserNames == d).QueryAsync();
+            var a = await SqlWriter.Delete<UserModel>().QueryAsync();
 
-            var n = await Postgres.Select<UserModel>().Where(u => u.UserID == k || u.UserNames != "d" && u.UserType == userType).QueryAsync();
+            await InsertNewRows();
+
+            var b = await SqlWriter.Select<UserModel>().QueryAsync();
+
+            UserType userTypeZero = (UserType) zero;
+
+            UserType userTypeOne = (UserType) one;
+
+            var c = await SqlWriter.Select<UserModel>().Limit(two).Where(u => u.UserType == userTypeZero).QueryAsync(); //casting in the Where clause is not supported by the Mia Plaza library
+
+            var d = await SqlWriter.Select<UserModel>().Where(u => u.FirstName == adam).QueryFirstAsync();
+
+            var e = await SqlWriter.Select<UserModel>().Where(u => u.UserType == userTypeOne && u.SomeLongNumber == onethousand && (u.FirstName == debra || u.FirstName == dexter)).QueryAsync();
+
+            var f = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > zero).QueryAsync();
+
+            var g = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > zero || (u.FirstName == adam && u.LastName == warlock) || u.FirstName == fool).QueryAsync();
+
+            d.SomeLongNumber = ninethousand;
+
+            var h = await SqlWriter.Update(d).QueryFirstAsync();
+
+            var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == fortytwo).Where(u => u.FirstName == dexter && u.LastName == morgan).QueryFirstAsync();
 
         }
 
         private static async Task TestUsingComplexClosure()
         {
-            var a = new UserModel { UserNames = "test", UserID = 2 };
+            UserModel adam = new UserModel { FirstName = "Adam", LastName = "Warlock", SomeLongNumber = 0 };
 
-            var h = new UserModel { UserNames = "z" };
+            UserModel debra = new UserModel { FirstName = "Debra", UserType = UserType.Admin, SomeLongNumber = 1000 };
 
-            var i = new UserModel { UserNames = "f" };
+            UserModel dexter = new UserModel { FirstName = "Dexter", LastName = "Morgan", UserType = UserType.Admin, SomeLongNumber = 1000 };
 
-            var b = await Postgres.Select<UserModel>().Where(u => u.UserID == a.UserID).QueryFirstOrDefaultAsync();
+            UserModel fool = new UserModel { FirstName = "Fool", SomeLongNumber = 42 };
 
-            var c = await Postgres.Update<UserModel>().Set(u => u.UserNames == a.UserNames).Where(u => u.UserID == a.UserID).QueryFirstOrDefaultAsync();
+            var a = await SqlWriter.Delete<UserModel>().QueryAsync();
 
-            var d = await Postgres.Delete<UserModel>().Where(u => u.UserID == a.UserID).QueryAsync();
+            await InsertNewRows();
 
-            var e = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID).QueryAsync();
+            var b = await SqlWriter.Select<UserModel>().QueryAsync();
 
-            var f = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID || u.UserNames == h.UserNames).QueryAsync();
+            var c = await SqlWriter.Select<UserModel>().Limit(2).Where(u => u.UserType == adam.UserType).QueryAsync();
 
-            var g = await Postgres.Select<UserModel>().Where(u => u.UserID > a.UserID && u.UserNames == i.UserNames).QueryAsync();
+            var d = await SqlWriter.Select<UserModel>().Where(u => u.FirstName == adam.FirstName).QueryFirstAsync();
 
-            //the MiaPlaza library will not remove this closure without the .Value
-            var j = await Postgres.Select<UserModel>().Where(u => (u.UserID!.Value == 1 && u.UserNames == i.UserNames) || u.UserType > UserType.User).QueryAsync();
+            var e = await SqlWriter.Select<UserModel>().Where(u => u.UserType == dexter.UserType && u.SomeLongNumber == dexter.SomeLongNumber && (u.FirstName == debra.FirstName || u.FirstName == dexter.FirstName)).QueryAsync();
+
+            var f = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > adam.SomeLongNumber.Value).QueryAsync();            
+
+            var g = await SqlWriter.Select<UserModel>().Where(u => u.SomeLongNumber > adam.SomeLongNumber.Value || (u.FirstName == adam.FirstName && u.LastName == adam.LastName) || u.FirstName == fool.FirstName).QueryAsync();
+
+            d.SomeLongNumber = 9000;
+
+            var h = await SqlWriter.Update(d).QueryFirstAsync();
+
+            var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == fool.SomeLongNumber.Value).Where(u => u.FirstName == dexter.FirstName && u.LastName == dexter.LastName).QueryFirstAsync();
         }
 
         public static object? NullableULongToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value)

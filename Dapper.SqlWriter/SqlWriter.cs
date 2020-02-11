@@ -67,11 +67,11 @@ namespace Dapper.SqlWriter
 
         internal void SlowQueryDetected(string sql, TimeSpan timeSpan) => OnSlowQueryDetected?.Invoke(sql, timeSpan);
 
-        public Select<C> Select<C>(Expression<Func<C, object>>? select = null) where C : class
+        public Select<C> Select<C>() where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new Select<C>(select, registeredClass, this, Connection, QueryOptions, Logger);
+            return new Select<C>(registeredClass, this, Connection, QueryOptions, Logger);
         }
 
         public Delete<C> Delete<C>() where C : class

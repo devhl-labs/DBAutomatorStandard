@@ -14,7 +14,7 @@ namespace Dapper.SqlWriter
 {
     public class Delete<C> : BaseQuery<C> where C : class
     {
-        private List<ExpressionPart> _whereExpressionParts = new List<ExpressionPart>();
+        private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
         private readonly C? _item = null;
 
@@ -31,11 +31,9 @@ namespace Dapper.SqlWriter
             _connection = connection;
         }
 
-        public Delete<C> Modify(QueryOptions queryOptions, ILogger? logger = null)
+        public Delete<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
-
-            _logger = logger;
 
             return this;
         }
@@ -70,7 +68,7 @@ namespace Dapper.SqlWriter
 
             BinaryExpression binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass);
 
             Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
 
@@ -89,23 +87,57 @@ namespace Dapper.SqlWriter
             }
         }
 
-        private string GetSqlByItem()
+        public string ToSqlInjectionString()
+        {
+            if (_item == null)
+            {
+                return GetSqlByExpression(true);
+            }
+            else
+            {
+                return GetSqlByItem();
+            }
+        }
+
+        private string GetSqlByItem(bool allowSqlInjection = false)
         {
             string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" WHERE";
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey), delimiter: " AND")}";
+                foreach (RegisteredProperty<C> prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
+                {
+                    if (allowSqlInjection && _item != null)
+                    {
+                        sql = $"{sql} {prop.ToSqlInjectionString(_item)} AND";
+                    }
+                    else
+                    {
+                        sql = $"{sql} {prop.ToString()} AND";
+                    }
+                }
             }
             else
             {
-                sql = $"{sql} {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped), delimiter: " AND")}";
+                foreach (var prop in _registeredClass.RegisteredProperties.Where(p => p.NotMapped))
+                {
+                    if (allowSqlInjection)
+                    {
+                        sql = $"{sql} {prop.ToSqlInjectionString(_item)} AND";
+                    }
+                    else
+                    {
+                        sql = $"{sql} {prop.ToString()} AND";
+                    }
+                }
             }
+
+            if (sql.EndsWith(" AND")) sql = sql[..^4];
 
             return $"{sql} RETURNING *;";
         }
 
-        private string GetSqlByExpression()
+        private string GetSqlByExpression(bool allowSqlInjection = false)
         {
             string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" ";
 
@@ -113,10 +145,19 @@ namespace Dapper.SqlWriter
             {
                 sql = $"{sql}WHERE ";
 
-                sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
+                //sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
+
+                if (allowSqlInjection)
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                }
+                else
+                {
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                }                
             }
 
-            return $"{sql}RETURNING *;";
+            return $"{sql} RETURNING *;";
         }
 
         public async Task<IEnumerable<C>> QueryAsync()
