@@ -7,25 +7,20 @@ namespace Dapper.SqlWriter
     //https://stackoverflow.com/a/25938140/1578023
     public class ColumnMap
     {
-        private readonly Dictionary<string, string> _forward = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _mapping = new Dictionary<string, string>();
 
-        private readonly Dictionary<string, string> _reverse = new Dictionary<string, string>();
-
-        public void Add(string t1, string t2)
+        public void Add(string propertyName, string columnName)
         {
-            _forward.Add(t1, t2);
-
-            _reverse.Add(t2, t1);
+            _mapping.Add(columnName, propertyName);
         }
 
         public string this[string index]
         {
             get
             {
-                if (_forward.ContainsKey(index)) return _forward[index];
+                if (_mapping.ContainsKey(index)) return _mapping[index];
 
-                if (_reverse.ContainsKey(index)) return _reverse[index];
-
+                //if nothing exists in this dictionary, assume the property name is the same as the column name
                 return index;
             }
         }

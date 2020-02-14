@@ -164,6 +164,10 @@ namespace TestConsole
             var h = await SqlWriter.Update(d).QueryFirstAsync();
 
             var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == 42).Where(u => u.FirstName == "Dexter" && u.LastName == "Morgan").QueryFirstAsync();
+
+            var j = await SqlWriter.Delete(h).QueryAsync();
+
+            var k = await SqlWriter.Delete<UserModel>().Where(u => u.UserID > 5).QueryAsync();
         }
 
         private static async Task TestUsingVariableClosure()
@@ -173,6 +177,8 @@ namespace TestConsole
             int one = 1;
 
             int two = 2;
+
+            ulong five = 5;
 
             int fortytwo = 42;
 
@@ -218,6 +224,9 @@ namespace TestConsole
 
             var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == fortytwo).Where(u => u.FirstName == dexter && u.LastName == morgan).QueryFirstAsync();
 
+            var j = await SqlWriter.Delete(h).QueryAsync();
+
+            var k = await SqlWriter.Delete<UserModel>().Where(u => u.UserID > five).QueryAsync();
         }
 
         private static async Task TestUsingComplexClosure()
@@ -229,6 +238,8 @@ namespace TestConsole
             UserModel dexter = new UserModel { FirstName = "Dexter", LastName = "Morgan", UserType = UserType.Admin, SomeLongNumber = 1000 };
 
             UserModel fool = new UserModel { FirstName = "Fool", SomeLongNumber = 42 };
+
+            UserModel five = new UserModel { UserID = 5 };
 
             var a = await SqlWriter.Delete<UserModel>().QueryAsync();
 
@@ -251,6 +262,10 @@ namespace TestConsole
             var h = await SqlWriter.Update(d).QueryFirstAsync();
 
             var i = await SqlWriter.Update<UserModel>().Set(u => u.SomeLongNumber == fool.SomeLongNumber.Value).Where(u => u.FirstName == dexter.FirstName && u.LastName == dexter.LastName).QueryFirstAsync();
+
+            var j = await SqlWriter.Delete(h).QueryAsync();
+
+            var k = await SqlWriter.Delete<UserModel>().Where(u => u.UserID > five.UserID).QueryAsync();
         }
 
         public static object? NullableULongToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value)
