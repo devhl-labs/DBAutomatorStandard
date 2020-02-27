@@ -166,10 +166,35 @@ namespace Dapper.SqlWriter
 
             var result = await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false);
 
+            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
+            //{
+            //    dbObject.ObjectState = resultDbObject.ObjectState;
+
+            //    dbObject._oldValues = resultDbObject._oldValues;
+            //}
+
             if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(_sqlWriter);
 
             return result;
         }
+
+        //public async Task<IEnumerable<T>> QueryAsync<T>() where T : DBObject<T>
+        //{
+        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnDeleteAsync(_sqlWriter);
+
+        //    var result = await QueryAsync<T>(QueryType.Delete, ToString()).ConfigureAwait(false);
+
+        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
+        //    {
+        //        dbObject.ObjectState = resultDbObject.ObjectState;
+
+        //        dbObject._oldValues = resultDbObject._oldValues;
+        //    }
+
+        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(_sqlWriter);
+
+        //    return result;
+        //}
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false)).ToList();
     }

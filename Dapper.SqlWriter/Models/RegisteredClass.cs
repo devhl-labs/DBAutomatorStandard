@@ -10,6 +10,11 @@ using MiaPlaza.ExpressionUtils.Evaluating;
 
 namespace Dapper.SqlWriter
 {
+    //public class RegisteredClass<C> where C : DBObject<C>
+    //{
+
+    //}
+
     public class RegisteredClass<C>
     {
         internal string DatabaseTableName { get; set; } = string.Empty;

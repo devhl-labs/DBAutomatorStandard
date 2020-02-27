@@ -39,21 +39,6 @@ namespace Dapper.SqlWriter
         public string ToSqlInjectionString() => GetString(true);
 
         public override string ToString() => GetString();
-        //{
-        //    string sql = $"INSERT INTO \"{_registeredClass.DatabaseTableName}\" (";
-
-        //    foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
-
-        //    sql = sql[0..^2];
-
-        //    sql = $"{sql}) VALUES (";
-
-        //    foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
-
-        //    sql = sql[0..^2];
-
-        //    return $"{sql}) RETURNING *;";
-        //}
 
         private string GetString(bool allowSqlInjection = false)
         {
@@ -97,9 +82,34 @@ namespace Dapper.SqlWriter
 
             var result = await QueryFirstAsync(QueryType.Insert, ToString()).ConfigureAwait(false);
 
+            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
+            //{
+            //    dbObject.ObjectState = resultDbObject.ObjectState;
+
+            //    dbObject._oldValues = resultDbObject._oldValues;
+            //}
+
             if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
 
             return result;
         }
+
+        //public async Task<T> QueryFirstAsync<T>() where T : DBObject<T> 
+        //{
+        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(_sqlWriter);
+
+        //    var result = await QueryFirstAsync<T>(QueryType.Insert, ToString()).ConfigureAwait(false);
+
+        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
+        //    {
+        //        dbObject.ObjectState = resultDbObject.ObjectState;
+
+        //        dbObject._oldValues = resultDbObject._oldValues;
+        //    }
+
+        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
+
+        //    return result;
+        //}
     }
 }

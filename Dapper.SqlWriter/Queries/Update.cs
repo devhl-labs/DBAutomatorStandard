@@ -187,10 +187,35 @@ namespace Dapper.SqlWriter
 
             var result = await QueryFirstAsync(QueryType.Update, ToString());
 
+            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
+            //{
+            //    dbObject.ObjectState = resultDbObject.ObjectState;
+
+            //    dbObject._oldValues = resultDbObject._oldValues;
+            //}
+
             if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnUpdatedAsync(_sqlWriter);
 
             return result;
         }
+
+        //public async Task<T> QueryFirstAsync<T>() where T : DBObject<T>
+        //{
+        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnUpdateAsync(_sqlWriter);
+
+        //    var result = await QueryFirstAsync<T>(QueryType.Update, ToString());
+
+        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
+        //    {
+        //        dbObject.ObjectState = resultDbObject.ObjectState;
+
+        //        dbObject._oldValues = resultDbObject._oldValues;
+        //    }
+
+        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnUpdatedAsync(_sqlWriter);
+
+        //    return result;
+        //}
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false)).ToList();
 

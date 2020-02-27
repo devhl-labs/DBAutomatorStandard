@@ -15,7 +15,7 @@ namespace Dapper.SqlWriter
 {
     public class Select<C> : BaseQuery<C> where C : class
     {
-        private List<ExpressionPart<C>> _selectExpressionParts = new List<ExpressionPart<C>>();
+        private readonly List<ExpressionPart<C>> _selectExpressionParts = new List<ExpressionPart<C>>();
 
         private int? _top = null;
 
@@ -29,12 +29,14 @@ namespace Dapper.SqlWriter
 
         private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
+        private string _tableName = string.Empty;
+
 
         private List<ExpressionPart<C>> _orderByExpressionParts = new List<ExpressionPart<C>>();
 
-        internal Select(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Select(RegisteredClass<C> registeredClass, SqlWriter sqlWriter, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _sqlWriter = dBAutomator;
+            _sqlWriter = sqlWriter;
 
             _queryOptions = queryOptions;
 
@@ -42,15 +44,16 @@ namespace Dapper.SqlWriter
 
             _registeredClass = registeredClass;
 
+            _tableName = _registeredClass.DatabaseTableName;
+
             _connection = connection;
+        }
 
-            //if (select == null) return;
+        public Select<C> TableName(string tableName)
+        {
+            _tableName = tableName;
 
-            //select = PartialEvaluator.PartialEvalBody(select, ExpressionInterpreter.Instance);
-
-            //BinaryExpression? binaryExpression = Statics.GetBinaryExpression(select);
-
-            //_selectExpressionParts = Statics.GetExpressionParts(binaryExpression);
+            return this;
         }
 
         public Select<C> Options(QueryOptions queryOptions)
@@ -221,7 +224,7 @@ namespace Dapper.SqlWriter
 
             sql = sql[0..^1];
 
-            sql = $"{sql} FROM \"{_registeredClass.DatabaseTableName}\"";
+            sql = $"{sql} FROM \"{_tableName}\"";
 
             if (_whereExpressionParts.Count > 0)
             {

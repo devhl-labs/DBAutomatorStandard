@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 
 namespace Dapper.SqlWriter
 {
@@ -13,8 +14,10 @@ namespace Dapper.SqlWriter
     public delegate void SlowQueryWarningEventHandler(string methodName, TimeSpan timeSpan);
 
 
-    public class SqlWriter
+    public class SqlWriter : IDisposable
     {
+        internal readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
+
         public event SlowQueryWarningEventHandler? OnSlowQueryDetected;
 
         public ILogger? Logger { get; }
@@ -52,9 +55,23 @@ namespace Dapper.SqlWriter
             {
                 throw new SqlWriterException(e.Message, e);
             }
-
-
         }
+
+        //public RegisteredClass<T> Register<T>() where T : DBObject<T>
+        //{
+        //    try
+        //    {
+        //        var registeredClass = new RegisteredClass<T>();
+
+        //        RegisteredClasses.Add(registeredClass);
+
+        //        return registeredClass;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        throw new SqlWriterException(e.Message, e);
+        //    }
+        //}
 
         public RegisteredClass<C> Register<C>(string tableName) where C : class
         {
@@ -90,10 +107,21 @@ namespace Dapper.SqlWriter
 
         public Insert<C> Insert<C>(C item) where C : class
         {
+            var a = typeof(C);
+
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
             return new Insert<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
         }
+
+        //public Insert<T> Insert<T>(T item) where T : DBObject<T>
+        //{
+        //    var a = typeof(T);
+
+        //    RegisteredClass<T> registeredClass = (RegisteredClass<T>) RegisteredClasses.First(r => r is RegisteredClass<C>);
+
+        //    return new Insert<T>(item, registeredClass, this, Connection, QueryOptions, Logger);
+        //}
 
         public Update<C> Update<C>(C item) where C : class
         {
@@ -123,7 +151,7 @@ namespace Dapper.SqlWriter
             return result[..^1];
         }
 
-        public ObjectState GetState<C>(C item) where C : DBObject<C>
+        public ObjectState GetObjectState<C>(C item) where C : DBObject<C>
         {
             if (item.ObjectState == ObjectState.Deleted) return ObjectState.Deleted;
 
@@ -134,6 +162,11 @@ namespace Dapper.SqlWriter
             if (item._oldValues != GetValues(item)) item.ObjectState = ObjectState.Dirty;
 
             return item.ObjectState;
+        }
+
+        public void Dispose()
+        {
+            _semaphoreSlim.Dispose();
         }
     }
 }
