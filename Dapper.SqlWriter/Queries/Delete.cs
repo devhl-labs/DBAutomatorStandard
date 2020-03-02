@@ -12,13 +12,13 @@ using System.Data;
 
 namespace Dapper.SqlWriter 
 {
-    public class Delete<C> : BaseQuery<C> where C : class
+    public class DeleteBase<C> : BaseQuery<C> where C : class
     {
         private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
         private readonly C? _item = null;
 
-        internal Delete(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal DeleteBase(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -31,14 +31,14 @@ namespace Dapper.SqlWriter
             _connection = connection;
         }
 
-        public Delete<C> Options(QueryOptions queryOptions)
+        public DeleteBase<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
 
             return this;
         }
 
-        internal Delete(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal DeleteBase(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -62,7 +62,7 @@ namespace Dapper.SqlWriter
             }
         }
 
-        public Delete<C> Where(Expression<Func<C, object>>? where)
+        public DeleteBase<C> Where(Expression<Func<C, object>>? where)
         {
             where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
 
@@ -101,6 +101,8 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByItem(bool allowSqlInjection = false)
         {
+            if (_item == null) throw new SqlWriterException("Item must not be null.", new ArgumentException());
+
             string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" WHERE";
 
             if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
@@ -177,24 +179,6 @@ namespace Dapper.SqlWriter
 
             return result;
         }
-
-        //public async Task<IEnumerable<T>> QueryAsync<T>() where T : DBObject<T>
-        //{
-        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnDeleteAsync(_sqlWriter);
-
-        //    var result = await QueryAsync<T>(QueryType.Delete, ToString()).ConfigureAwait(false);
-
-        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
-        //    {
-        //        dbObject.ObjectState = resultDbObject.ObjectState;
-
-        //        dbObject._oldValues = resultDbObject._oldValues;
-        //    }
-
-        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(_sqlWriter);
-
-        //    return result;
-        //}
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false)).ToList();
     }

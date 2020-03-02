@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace Dapper.SqlWriter
 {
-    public class ExpressionModel<C>
+    public class ExpressionModel<C> where C : class
     {
         private readonly RegisteredClass<C> _registeredClass;
 

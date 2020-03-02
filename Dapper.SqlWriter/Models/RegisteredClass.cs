@@ -10,12 +10,7 @@ using MiaPlaza.ExpressionUtils.Evaluating;
 
 namespace Dapper.SqlWriter
 {
-    //public class RegisteredClass<C> where C : DBObject<C>
-    //{
-
-    //}
-
-    public class RegisteredClass<C>
+    public class RegisteredClass<C> where C : class
     {
         internal string DatabaseTableName { get; set; } = string.Empty;
 
@@ -47,8 +42,6 @@ namespace Dapper.SqlWriter
                 };
 
                 registeredProperty.RegisteredClass = this;
-
-                //SetToDatabaseConverter(registeredProperty);
 
                 RegisteredProperties.Add(registeredProperty);
 

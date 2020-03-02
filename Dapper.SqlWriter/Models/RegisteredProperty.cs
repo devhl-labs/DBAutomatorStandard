@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Dapper.SqlWriter
 {
-    public class RegisteredProperty<C>
+    public class RegisteredProperty<C> where C : class
     {
 #pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public PropertyInfo Property { get; set; }

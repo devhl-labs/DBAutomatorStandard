@@ -8,11 +8,11 @@ using System.Data;
 
 namespace Dapper.SqlWriter
 {
-    public class Insert<C> : BaseQuery<C> where C : class
+    public class InsertBase<C> : BaseQuery<C> where C : class
     {
-        private readonly C _item;
+        protected C _item;
 
-        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal InsertBase(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -29,7 +29,7 @@ namespace Dapper.SqlWriter
             Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
-        public Insert<C> Options(QueryOptions queryOptions)
+        public InsertBase<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
 
@@ -82,34 +82,9 @@ namespace Dapper.SqlWriter
 
             var result = await QueryFirstAsync(QueryType.Insert, ToString()).ConfigureAwait(false);
 
-            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
-            //{
-            //    dbObject.ObjectState = resultDbObject.ObjectState;
-
-            //    dbObject._oldValues = resultDbObject._oldValues;
-            //}
-
             if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
 
             return result;
         }
-
-        //public async Task<T> QueryFirstAsync<T>() where T : DBObject<T> 
-        //{
-        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(_sqlWriter);
-
-        //    var result = await QueryFirstAsync<T>(QueryType.Insert, ToString()).ConfigureAwait(false);
-
-        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
-        //    {
-        //        dbObject.ObjectState = resultDbObject.ObjectState;
-
-        //        dbObject._oldValues = resultDbObject._oldValues;
-        //    }
-
-        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
-
-        //    return result;
-        //}
     }
 }

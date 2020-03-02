@@ -13,7 +13,7 @@ using MiaPlaza.ExpressionUtils;
 
 namespace Dapper.SqlWriter
 {
-    public class Update<C> : BaseQuery<C> where C : class
+    public class UpdateBase<C> : BaseQuery<C> where C : class
     {
         private readonly C? _item = null;
 
@@ -23,7 +23,7 @@ namespace Dapper.SqlWriter
 
         private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
-        internal Update(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal UpdateBase(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -51,7 +51,7 @@ namespace Dapper.SqlWriter
             }
         }
 
-        internal Update(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal UpdateBase(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
             _sqlWriter = dBAutomator;
 
@@ -64,14 +64,14 @@ namespace Dapper.SqlWriter
             _connection = connection;
         }
 
-        public Update<C> Options(QueryOptions queryOptions)
+        public UpdateBase<C> Options(QueryOptions queryOptions)
         {
             _queryOptions = queryOptions;
 
             return this;
         }
 
-        public Update<C> Set(Expression<Func<C, object>> set)
+        public UpdateBase<C> Set(Expression<Func<C, object>> set)
         {
             if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
     
@@ -86,7 +86,7 @@ namespace Dapper.SqlWriter
             return this;
         }
 
-        public Update<C> Where(Expression<Func<C, object>> where)
+        public UpdateBase<C> Where(Expression<Func<C, object>> where)
         {
             if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
 
@@ -127,7 +127,7 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByItem(bool allowSqlInjection = false)
         {
-            if (_item == null) throw new SqlWriterException("The item cannot be null.", new NullReferenceException());
+            if (_item == null) throw new SqlWriterException("Item must not be null.", new NullReferenceException());
 
             //string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement), "s_", ", ")} WHERE";
 
@@ -198,24 +198,6 @@ namespace Dapper.SqlWriter
 
             return result;
         }
-
-        //public async Task<T> QueryFirstAsync<T>() where T : DBObject<T>
-        //{
-        //    if (_item is IDBEvent dBEvent) _ = dBEvent.OnUpdateAsync(_sqlWriter);
-
-        //    var result = await QueryFirstAsync<T>(QueryType.Update, ToString());
-
-        //    if (_item is DBObject<T> dbObject && result is DBObject<T> resultDbObject)
-        //    {
-        //        dbObject.ObjectState = resultDbObject.ObjectState;
-
-        //        dbObject._oldValues = resultDbObject._oldValues;
-        //    }
-
-        //    if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnUpdatedAsync(_sqlWriter);
-
-        //    return result;
-        //}
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false)).ToList();
 

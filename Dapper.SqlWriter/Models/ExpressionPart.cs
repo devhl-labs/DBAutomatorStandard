@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Dapper.SqlWriter.Models
 {
-    public class ExpressionPart<C>
+    public class ExpressionPart<C> where C : class
     {
         public RegisteredProperty<C>? RegisteredProperty { get; set; } = null;
 

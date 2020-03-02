@@ -15,10 +15,11 @@ namespace Dapper.SqlWriter
 
     public enum ObjectState
     {
-        Clean,
-        Dirty,
+        //Clean,
+        //Dirty,
         New,
-        Deleted
+        Deleted,
+        InDatabase
     }
 
     public enum QueryType

@@ -9,6 +9,7 @@ using Dapper;
 using Dapper.SqlWriter.Models;
 using MiaPlaza.ExpressionUtils.Evaluating;
 using MiaPlaza.ExpressionUtils;
+using System.Threading.Tasks;
 
 namespace Dapper.SqlWriter
 {
@@ -29,7 +30,7 @@ namespace Dapper.SqlWriter
             throw new SqlWriterException("Unhandled value", new ArgumentException());
         }
 
-        public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? expressionParts, string parameterPrefix = "w_")
+        public static void AddParameters<C>(DynamicParameters p, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? expressionParts, string parameterPrefix = "w_") where C : class
         {
             if (expressionParts == null) return;
 
@@ -53,9 +54,9 @@ namespace Dapper.SqlWriter
             return;
         }
 
-        public static void AddParameters<C>(DynamicParameters p, C item, IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_")
+        public static void AddParameters<C>(DynamicParameters p, C item, IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_") where C : class
         {
-            if (item == null) throw new SqlWriterException("The item cannot be null.", new ArgumentNullException("item"));
+            if (item == null) throw new SqlWriterException("Item must not be null.", new ArgumentNullException("item"));
 
             foreach (var registeredProperty in registeredProperties)
             {
@@ -76,7 +77,7 @@ namespace Dapper.SqlWriter
             return b1;
         }
 
-        public static List<ExpressionPart<C>> GetExpressionParts<C>(BinaryExpression binaryExpression, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? result = null, string parameterPrefix = "w_")
+        public static List<ExpressionPart<C>> GetExpressionParts<C>(BinaryExpression binaryExpression, RegisteredClass<C> registeredClass, List<ExpressionPart<C>>? result = null, string parameterPrefix = "w_") where C : class
         {
             result ??= new List<ExpressionPart<C>>();
 
@@ -173,7 +174,7 @@ namespace Dapper.SqlWriter
             return false;
         }
 
-        public static RegisteredProperty<C> GetRegisteredProperty<C>(RegisteredClass<C> registeredClass, MemberExpression expression)
+        public static RegisteredProperty<C> GetRegisteredProperty<C>(RegisteredClass<C> registeredClass, MemberExpression expression) where C : class
         {
             RegisteredProperty<C> registeredProperty;
 
