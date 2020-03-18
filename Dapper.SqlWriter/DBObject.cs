@@ -37,6 +37,10 @@ namespace Dapper.SqlWriter
             {
                 registeredProperty.Property.SetValue(tObj, registeredProperty.Property.GetValue(result, null));
             }
+
+            tObj.ObjectState = result.ObjectState;
+
+            tObj._oldValues = result._oldValues;
         }
 
         private string GetState<T>(SqlWriter sqlWriter) where T : class

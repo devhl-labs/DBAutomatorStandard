@@ -268,7 +268,7 @@ namespace TestConsole
             var k = await SqlWriter.Delete<UserModel>().Where(u => u.UserID > five.UserID).QueryAsync();
         }
 
-        public static object? NullableULongToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value)
+        public static object? NullableULongToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value) where C : class
         {
             if (value == null) return value;
 

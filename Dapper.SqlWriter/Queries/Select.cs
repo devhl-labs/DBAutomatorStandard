@@ -272,5 +272,21 @@ namespace Dapper.SqlWriter
         public async Task<C?> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false)).ToList();
+
+        public async Task<List<T>> QueryToListAsync<T>()
+        {
+            IEnumerable<C> records = await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false);
+
+            List<T> results = new List<T>();
+
+            foreach (C record in records)
+            {
+                object recordObject = record;
+
+                results.Add((T) recordObject);
+            }
+
+            return results;
+        }
     }
 }

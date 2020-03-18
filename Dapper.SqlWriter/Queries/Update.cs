@@ -201,6 +201,22 @@ namespace Dapper.SqlWriter
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false)).ToList();
 
+        public async Task<List<T>> QueryToListAsync<T>()
+        {
+            IEnumerable<C> records = await QueryAsync(QueryType.Update, ToString()).ConfigureAwait(false);
+
+            List<T> results = new List<T>();
+
+            foreach (C record in records)
+            {
+                object recordObject = record;
+
+                results.Add((T) recordObject);
+            }
+
+            return results;
+        }
+
         private string GetSqlByExpression(bool allowSqlInjection = false)
         {
             //string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
