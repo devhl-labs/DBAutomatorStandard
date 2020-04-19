@@ -15,8 +15,6 @@ namespace Dapper.SqlWriter
 
     public enum ObjectState
     {
-        //Clean,
-        //Dirty,
         New,
         Deleted,
         InDatabase

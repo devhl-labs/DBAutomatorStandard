@@ -64,7 +64,7 @@ namespace Dapper.SqlWriter
 
         public DeleteBase<C> Where(Expression<Func<C, object>>? where)
         {
-            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+            where = where.RemoveClosure();
 
             BinaryExpression binaryExpression = Statics.GetBinaryExpression(where);
 

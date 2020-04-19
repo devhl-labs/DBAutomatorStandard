@@ -74,8 +74,8 @@ namespace Dapper.SqlWriter
         public UpdateBase<C> Set(Expression<Func<C, object>> set)
         {
             if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
-    
-            set = PartialEvaluator.PartialEvalBody(set, ExpressionInterpreter.Instance);
+
+            set = set.RemoveClosure()!;
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(set);
 
@@ -90,7 +90,7 @@ namespace Dapper.SqlWriter
         {
             if (_item != null) throw new SqlWriterException("This method does not support instantiated objects.", new ArgumentException());
 
-            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+            where = where.RemoveClosure()!;
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
@@ -187,13 +187,6 @@ namespace Dapper.SqlWriter
 
             var result = await QueryFirstAsync(QueryType.Update, ToString());
 
-            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
-            //{
-            //    dbObject.ObjectState = resultDbObject.ObjectState;
-
-            //    dbObject._oldValues = resultDbObject._oldValues;
-            //}
-
             if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnUpdatedAsync(_sqlWriter);
 
             return result;
@@ -219,8 +212,6 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByExpression(bool allowSqlInjection = false)
         {
-            //string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET {Statics.ToColumnNameEqualsParameterName(_registeredClass, _setExpressionParts, "s_")}";
-
             string sql = $"UPDATE \"{_registeredClass.DatabaseTableName}\" SET";
 
             if (allowSqlInjection)
@@ -229,13 +220,15 @@ namespace Dapper.SqlWriter
             }
             else
             {
-                foreach (var set in _setExpressionParts) sql = $"{sql} {set.ToString()}"; 
+                foreach (ExpressionPart<C> set in _setExpressionParts.Where(s => s.ConstantExpression != null && s.MemberExpression != null)) 
+                    sql = $"{sql}{set.GetSetString()}, ";
             }
+
+            if (sql.EndsWith(", "))
+                sql = sql[0..^2];
 
             if (_whereExpressionParts.Count > 0)
             {
-                //sql = $"{sql} WHERE {Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts, "w_")}";
-
                 sql = $"{sql} WHERE";
 
                 if (allowSqlInjection)
@@ -244,7 +237,7 @@ namespace Dapper.SqlWriter
                 }
                 else
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where}";
                 }
             }
 

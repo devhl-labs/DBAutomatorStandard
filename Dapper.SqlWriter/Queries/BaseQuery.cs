@@ -58,6 +58,8 @@ namespace Dapper.SqlWriter
                 if (queryType == QueryType.Delete) dbObject.ObjectState = ObjectState.Deleted;
 
                 dbObject.StoreState<C>(_sqlWriter);
+
+                dbObject.QueryType = queryType;
             }
         }
 
@@ -78,6 +80,10 @@ namespace Dapper.SqlWriter
                 StopWatchEnd(stopwatch, sql);
 
                 _logger?.QueryExecuted(new QuerySuccess { Method = "QueryAsync", Results = result.Count(), Sql = sql, Stopwatch = stopwatch });
+
+                PrepareResults(queryType, result);
+
+                return result;
             }
             catch (Exception e)
             {
@@ -93,10 +99,6 @@ namespace Dapper.SqlWriter
             {
                 _sqlWriter._semaphoreSlim.Release();
             }
-
-            PrepareResults(queryType, result);
-
-            return result;
         }
 
         protected async Task<C> QueryFirstAsync(QueryType queryType, string sql)
@@ -114,6 +116,10 @@ namespace Dapper.SqlWriter
                 StopWatchEnd(stopwatch, sql);
 
                 _logger?.QueryExecuted(new QuerySuccess { Method = "QueryFirstAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
+
+                PrepareResult(queryType, result);
+
+                return result;
             }
             catch (Exception e)
             {
@@ -129,10 +135,6 @@ namespace Dapper.SqlWriter
             {
                 _sqlWriter._semaphoreSlim.Release();
             }
-
-            PrepareResult(queryType, result);
-
-            return result;
         }
 
         protected async Task<C?> QueryFirstOrDefaultAsync(QueryType queryType, string sql)
@@ -151,6 +153,9 @@ namespace Dapper.SqlWriter
 
                 _logger?.QueryExecuted(new QuerySuccess { Method = "QueryFirstOrDefaultAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
 
+                PrepareResult(queryType, result);
+
+                return result;
             }
             catch (Exception e)
             {
@@ -166,10 +171,6 @@ namespace Dapper.SqlWriter
             {
                 _sqlWriter._semaphoreSlim.Release();
             }
-
-            PrepareResult(queryType, result);
-
-            return result;
         }
 
         protected async Task<C> QuerySingleAsync(QueryType queryType, string sql)
@@ -187,6 +188,10 @@ namespace Dapper.SqlWriter
                 StopWatchEnd(stopwatch, sql);
 
                 _logger?.QueryExecuted(new QuerySuccess { Method = "QuerySingleAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
+                
+                PrepareResult(queryType, result);
+
+                return result;
             }
             catch (Exception e)
             {
@@ -202,10 +207,6 @@ namespace Dapper.SqlWriter
             {
                 _sqlWriter._semaphoreSlim.Release();
             }
-
-            PrepareResult(queryType, result);
-
-            return result;
         }
 
         protected async Task<C?> QuerySingleOrDefaultAsync(QueryType queryType, string sql)
@@ -223,6 +224,10 @@ namespace Dapper.SqlWriter
                 StopWatchEnd(stopwatch, sql);
 
                 _logger?.QueryExecuted(new QuerySuccess { Method = "QuerySingleOrDefaultAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
+
+                PrepareResult(queryType, result);
+
+                return result;
             }
             catch (Exception e)
             {
@@ -238,10 +243,6 @@ namespace Dapper.SqlWriter
             {
                 _sqlWriter._semaphoreSlim.Release();
             }
-
-            PrepareResult(queryType, result);
-
-            return result;
         }
 
 

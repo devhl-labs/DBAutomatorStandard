@@ -29,7 +29,13 @@ namespace Dapper.SqlWriter
 
         private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
 
+        private readonly List<ExpressionPart<C>> _orWhereExpressionParts = new List<ExpressionPart<C>>();
+
+        //private readonly List<ExpressionPart<C>> _andWhereExpressionParts = new List<ExpressionPart<C>>();
+
         private string _tableName = string.Empty;
+
+        private bool _isDistint;
 
 
         private List<ExpressionPart<C>> _orderByExpressionParts = new List<ExpressionPart<C>>();
@@ -65,9 +71,7 @@ namespace Dapper.SqlWriter
 
         public Select<C> Column(Expression<Func<C, object>> column)
         {
-            //todo this has to be tested still
-
-            column = PartialEvaluator.PartialEvalBody(column, ExpressionInterpreter.Instance);
+            column = column.RemoveClosure();
 
             ExpressionPart<C> part = new ExpressionPart<C>
             {
@@ -79,9 +83,16 @@ namespace Dapper.SqlWriter
             return this;
         }
 
+        public Select<C> Distinct()
+        {
+            _isDistint = true;
+
+            return this;
+        }
+
         public Select<C> Where(Expression<Func<C, object>> where)
         {
-            where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+            where = where.RemoveClosure();
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
@@ -92,32 +103,50 @@ namespace Dapper.SqlWriter
             return this;
         }
 
+        /// <summary>
+        /// Use this when building the sql while iterating a collection.  It will result in ...Where() AND ( WhereOr[0] OR WhereOr[1]...);
+        /// </summary>
+        /// <param name="where"></param>
+        /// <returns></returns>
+        public Select<C> OrWhere(Expression<Func<C, object>> where)
+        {
+            where = where.RemoveClosure()!;
+
+            BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
+
+            _orWhereExpressionParts.Add(new ExpressionPart<C> { Parens = Parens.Left});
+
+            _orWhereExpressionParts.AddRange(Statics.GetExpressionParts(binaryExpression, _registeredClass, null, "orw_"));
+
+            Statics.AddParameters(_p, _registeredClass, _orWhereExpressionParts, "orw_");
+
+            _orWhereExpressionParts.Add(new ExpressionPart<C> { Parens = Parens.Right });
+
+            _orWhereExpressionParts.Add(new ExpressionPart<C> { NodeType = ExpressionType.OrElse});
+
+            return this;
+        }
+
+        //public Select<C> AndWhere(Expression<Func<C, object>> where)
+        //{
+        //    where = PartialEvaluator.PartialEvalBody(where, ExpressionInterpreter.Instance);
+
+        //    BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
+
+        //    _andWhereExpressionParts.AddRange(Statics.GetExpressionParts(binaryExpression, _registeredClass));
+
+        //    Statics.AddParameters(_p, _registeredClass, _orWhereExpressionParts);
+
+        //    return this;
+        //}
+
         public Select<C> OrderBy(Expression<Func<C, object>> orderBy) => OrderBy(orderBy, true);
 
         public Select<C> OrderByDesc(Expression<Func<C, object>> orderBy) => OrderBy(orderBy, false);
 
         private Select<C> OrderBy(Expression<Func<C, object>> orderBy, bool ascending)
         {
-            //orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
-
-            //BinaryExpression? binaryExpression = Statics.GetBinaryExpression(orderBy);
-
-            //var parts = Statics.GetExpressionParts(binaryExpression);
-
-            //_orderByExpressionParts ??= new List<ExpressionPart>();
-
-            //foreach (var part in parts.EmptyIfNull())
-            //{
-            //    if (ascending) part.NodeType = ExpressionType.GreaterThan;
-
-            //    if (!ascending) part.NodeType = ExpressionType.LessThan;
-
-            //    _orderByExpressionParts.Add(part);
-            //}
-
-            //return this;
-
-            orderBy = PartialEvaluator.PartialEvalBody(orderBy, ExpressionInterpreter.Instance);
+            orderBy = orderBy.RemoveClosure();
 
             _orderByExpressionParts ??= new List<ExpressionPart<C>>();
 
@@ -190,9 +219,14 @@ namespace Dapper.SqlWriter
 
         public override string ToString() => GetString();
 
-        public string GetString(bool allowSqlInjection = false)
+        private string GetString(bool allowSqlInjection = false)
         {
             string sql = $"SELECT";
+
+            if (_isDistint)
+            {
+                sql = $"{sql} DISTINCT";
+            }
 
             if (_top != null)
             {
@@ -226,10 +260,13 @@ namespace Dapper.SqlWriter
 
             sql = $"{sql} FROM \"{_tableName}\"";
 
-            if (_whereExpressionParts.Count > 0)
+            if (_whereExpressionParts.Count > 0 || _orWhereExpressionParts.Count > 0)
             {
                 sql = $"{sql} WHERE";
+            }
 
+            if (_whereExpressionParts.Count > 0)
+            {
                 if (_rowNum != null) sql = $"{sql} ROWNUM {_comparison.GetOperator()} {_rowNum}";
 
                 if (allowSqlInjection)
@@ -238,8 +275,31 @@ namespace Dapper.SqlWriter
                 }
                 else
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where}";
                 }
+            }
+
+            if (_orWhereExpressionParts.Count > 0)
+            {
+                if (_whereExpressionParts.Count > 0)
+                    sql = $"{sql} AND (";
+
+                if (allowSqlInjection)
+                {
+                    foreach (var where in _orWhereExpressionParts)
+                        sql = $"{sql} {where.ToSqlInjectionString()}";
+
+                }
+                else
+                {
+                    foreach (var where in _orWhereExpressionParts)
+                        sql = $"{sql} {where}";
+                }
+
+                sql = sql[..^2];
+
+                if (_whereExpressionParts.Count > 0)
+                    sql = $"{sql})";
             }
 
             if (_orderByExpressionParts.Count > 0)

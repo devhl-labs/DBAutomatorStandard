@@ -87,7 +87,7 @@ namespace Dapper.SqlWriter
             {
                 result.Add(new ExpressionPart<C> { Parens = Parens.Left });
 
-                GetExpressionParts(b1, registeredClass, result);
+                GetExpressionParts(b1, registeredClass, result, parameterPrefix);
 
                 result.Add(new ExpressionPart<C> { Parens = Parens.Right});
             }
@@ -100,7 +100,7 @@ namespace Dapper.SqlWriter
 
                 result.Add(new ExpressionPart<C> { Parens = Parens.Left });
 
-                GetExpressionParts(b2, registeredClass, result);
+                GetExpressionParts(b2, registeredClass, result, parameterPrefix);
 
                 result.Add(new ExpressionPart<C> { Parens = Parens.Right });
 
@@ -127,11 +127,24 @@ namespace Dapper.SqlWriter
             {
                 wherePart.ConstantExpression = c1;
 
-                wherePart.ConstantVariable = $"{registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name).ColumnName}";
+                if (wherePart.MemberExpression.Expression is MemberExpression propertyIsNullable)
+                {
+                    wherePart.ConstantVariable = $"{registeredClass.RegisteredProperties.First(p => p.PropertyName == propertyIsNullable.Member.Name).ColumnName}";
+
+                    wherePart.RegisteredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == propertyIsNullable.Member.Name);
+                }
+                else
+                {
+                    wherePart.ConstantVariable = $"{registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name).ColumnName}";
+
+                    wherePart.RegisteredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name);
+                }
 
                 wherePart.Prefix = parameterPrefix;
-
-                wherePart.RegisteredProperty = registeredClass.RegisteredProperties.First(p => p.PropertyName == wherePart.MemberExpression.Member.Name);
+            }
+            else if (binaryExpression.Right is UnaryExpression b && wherePart.MemberExpression != null)
+            {
+                throw new SqlWriterException("Unsupported expression. The right hand side should be a constant. When comparing a nullable to a constant, use the nullable's Value property.", new ArgumentException());
             }
             else
             {
@@ -166,7 +179,8 @@ namespace Dapper.SqlWriter
                 propertyInfo.PropertyType == typeof(long) ||
                 propertyInfo.PropertyType == typeof(long?) ||
 
-                propertyInfo.PropertyType.IsEnum
+                propertyInfo.PropertyType.IsEnum ||
+                propertyInfo.PropertyType.IsGenericType && propertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && propertyInfo.PropertyType.GetGenericArguments()[0].IsEnum
                 )
             {
                 return true;
@@ -220,6 +234,19 @@ namespace Dapper.SqlWriter
             if (member == null) throw new SqlWriterException("Unhandled expression type", new ArgumentException());
 
             return member;
+        }
+ 
+        public static Expression<Func<C, object>>? RemoveClosure<C>(this Expression<Func<C, object>>? exp)
+        {
+            if (exp == null)
+                return null;
+
+            var a = PartialEvaluator.PartialEvalBody(exp, ExpressionInterpreter.Instance);
+
+            if (a.ToString().Contains("An error occured during dynamic evaluation of an expression") == false)
+                return a;
+
+            return exp;
         }
     }
 }

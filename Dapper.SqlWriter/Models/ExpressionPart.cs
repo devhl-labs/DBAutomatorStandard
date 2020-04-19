@@ -62,5 +62,19 @@ namespace Dapper.SqlWriter.Models
 
             return null;
         }
+
+        public string? GetSetString()
+        {
+            if (MemberExpression == null)
+                return null;
+
+            if (ConstantExpression?.Value != null && MemberExpression.Member.Name != null)
+                return $"\"{MemberExpression.Member.Name}\" = @{Prefix}{ParameterName}";
+
+            if (ConstantExpression != null && ConstantExpression.Value == null && NodeType == ExpressionType.Equal)
+                return $"\"{MemberExpression.Member.Name}\" = NULL";
+
+            throw new ArgumentException("Expression not handled");
+        }
     }
 }

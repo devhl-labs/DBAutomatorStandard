@@ -1,4 +1,5 @@
 ﻿using Dapper.SqlWriter.Interfaces;
+using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,7 +11,12 @@ namespace Dapper.SqlWriter
         internal string _oldValues = string.Empty;
 
         [NotMapped]
+        [JsonProperty]
         public ObjectState ObjectState { get; internal set; } = ObjectState.New;
+
+        [JsonProperty]
+        [NotMapped]
+        public QueryType? QueryType { get; internal set; }
 
         public virtual async Task Save<T>(SqlWriter sqlWriter) where T : DBObject
         {
@@ -41,6 +47,8 @@ namespace Dapper.SqlWriter
             tObj.ObjectState = result.ObjectState;
 
             tObj._oldValues = result._oldValues;
+
+            tObj.QueryType = result.QueryType;
         }
 
         private string GetState<T>(SqlWriter sqlWriter) where T : class
