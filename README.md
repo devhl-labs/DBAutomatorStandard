@@ -3,7 +3,7 @@ This .NET Standard 2.1 library allows you to easily save and retrieve your objec
 
 ## Help
 Join me on Discord for help.
-<iframe src="https://discordapp.com/widget?id=701245583444279328&theme=dark" width="350" height="500" allowtransparency="true" frameborder="0"></iframe>
+https://discord.gg/AT4wJNq
 
 ## [Test Program](/TestConsole/Program.cs)
 Begin by instantiating a QueryOptions object, and pass that into the SqlWriter class.  Then register your database POCO classes with the library.
