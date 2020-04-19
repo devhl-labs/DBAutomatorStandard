@@ -1,8 +1,7 @@
 # Dapper.SqlWriter 
 This .NET Standard 2.1 library allows you to easily save and retrieve your objects from a database.
 
-## Help
-Join me on Discord for help.  
+## Help  
 ![Discord Banner 2](https://discordapp.com/api/guilds/701245583444279328/widget.png?style=banner2)
 
 ## [Test Program](/TestConsole/Program.cs)
