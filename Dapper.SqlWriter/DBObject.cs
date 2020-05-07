@@ -18,7 +18,7 @@ namespace Dapper.SqlWriter
         [NotMapped]
         public QueryType? QueryType { get; internal set; }
 
-        public virtual async Task Save<T>(SqlWriter sqlWriter) where T : DBObject
+        public async Task Save<T>(SqlWriter sqlWriter) where T : DBObject
         {
             object obj = this;
 
