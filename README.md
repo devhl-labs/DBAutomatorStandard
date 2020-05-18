@@ -42,6 +42,9 @@ var p = await sqlWriter.Select<UserModel>().Where(u => u.UserID == 2 || u.UserNa
 ## Configuring Your Classes
 The Register method returns a RegisteredClass object.  Use this object to configure table names, columns names, primary keys, and database generated columns.  You may also decorate your class with attributes.  This library uses five attributes: Key, NotMapped, TableName, ColumnName, and AutoIncrement.  The library will also work with views so you can easily get joins working.  
 
+## Change Tracking
+To enable change tracking, modify your class to inherit DbObject.  This will give your class a Save method.  When called, this method will either insert or update the object into your database.  If no changes were made, no action will occur.
+
 ## Callbacks
 Your classes can optionally implement the IDBEvent interface.  This will add callbacks in your POCO when the library inserts, updates, deletes, or selects your object.
 
