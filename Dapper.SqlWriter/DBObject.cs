@@ -8,47 +8,45 @@ namespace Dapper.SqlWriter
 {
     public abstract class DBObject
     {
-        internal string _oldValues = string.Empty;
+        internal string OldValues { get; set; } = string.Empty;
 
         [NotMapped]
         [JsonProperty]
         public ObjectState ObjectState { get; internal set; } = ObjectState.New;
 
-        [JsonProperty]
         [NotMapped]
+        [JsonProperty]
         public QueryType? QueryType { get; internal set; }
+
 
         public async Task Save<T>(SqlWriter sqlWriter) where T : DBObject
         {
             object obj = this;
 
-            T tObj = (T) obj;
+            T tObj = (T)obj;
 
             T? result = null;
 
             if (ObjectState == ObjectState.New)
             {
-                result = await sqlWriter.Insert(tObj).QueryFirstAsync();
+                await sqlWriter.Insert(tObj).QueryFirstAsync();
+
+                tObj.QueryType = Dapper.SqlWriter.QueryType.Insert;
             }
             else if (IsDirty<T>(sqlWriter))
             {
-                result = await sqlWriter.Update(tObj).QueryFirstAsync();
+                await sqlWriter.Update(tObj).QueryFirstAsync();
+
+                tObj.QueryType = Dapper.SqlWriter.QueryType.Update;
             }
 
-            if (result == null) return;
+            Statics.FillDatabaseGeneratedProperties(tObj, result, sqlWriter);
 
-            RegisteredClass<T> registeredClass = (RegisteredClass<T>) sqlWriter.RegisteredClasses.First(r => r is RegisteredClass<T>);
+            tObj.ObjectState = ObjectState.InDatabase; //  result.ObjectState;
 
-            foreach (RegisteredProperty<T> registeredProperty in registeredClass.RegisteredProperties.Where(p => p.IsAutoIncrement))
-            {
-                registeredProperty.Property.SetValue(tObj, registeredProperty.Property.GetValue(result, null));
-            }
+            tObj.StoreState<T>(sqlWriter); // result.OldValues;
 
-            tObj.ObjectState = result.ObjectState;
-
-            tObj._oldValues = result._oldValues;
-
-            tObj.QueryType = result.QueryType;
+            //tObj.QueryType = result.QueryType;
         }
 
         private string GetState<T>(SqlWriter sqlWriter) where T : class
@@ -57,9 +55,9 @@ namespace Dapper.SqlWriter
 
             object obj = this;
 
-            T tObj = (T) obj;
+            T tObj = (T)obj;
 
-            RegisteredClass<T> registeredClass = (RegisteredClass<T>) sqlWriter.RegisteredClasses.First(r => r is RegisteredClass<T>);
+            RegisteredClass<T> registeredClass = (RegisteredClass<T>)sqlWriter.RegisteredClasses.First(r => r is RegisteredClass<T>);
 
             foreach (var prop in registeredClass.RegisteredProperties.Where(p => !p.NotMapped).OrderBy(p => p.PropertyName))
             {
@@ -69,8 +67,8 @@ namespace Dapper.SqlWriter
             return result[..^1];
         }
 
-        internal void StoreState<T>(SqlWriter sqlWriter) where T : class => _oldValues = GetState<T>(sqlWriter);
+        internal void StoreState<T>(SqlWriter sqlWriter) where T : class => OldValues = GetState<T>(sqlWriter);
 
-        public bool IsDirty<T>(SqlWriter sqlWriter) where T : class => _oldValues != GetState<T>(sqlWriter) ? true : false;
+        public bool IsDirty<T>(SqlWriter sqlWriter) where T : class => OldValues != GetState<T>(sqlWriter) ? true : false;
     }
 }

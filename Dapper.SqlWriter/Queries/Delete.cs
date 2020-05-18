@@ -12,72 +12,72 @@ using System.Data;
 
 namespace Dapper.SqlWriter 
 {
-    public class DeleteBase<C> : BaseQuery<C> where C : class
+    public sealed class Delete<C> : BaseQuery<C> where C : class
     {
-        private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
+        private List<ExpressionPart<C>> WhereExpressionParts { get; set; } = new List<ExpressionPart<C>>();
 
-        private readonly C? _item = null;
+        private C? Item { get; set; }
 
-        internal DeleteBase(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _sqlWriter = dBAutomator;
+            SqlWriter = dBAutomator;
 
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
-            _logger = logger;
+            Logger = logger;
 
-            _registeredClass = registeredClass;
+            RegisteredClass = registeredClass;
 
-            _connection = connection;
+            Connection = connection;
         }
 
-        public DeleteBase<C> Options(QueryOptions queryOptions)
+        public Delete<C> Options(QueryOptions queryOptions)
         {
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
             return this;
         }
 
-        internal DeleteBase(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _sqlWriter = dBAutomator;
+            SqlWriter = dBAutomator;
 
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
-            _logger = logger;
+            Logger = logger;
 
-            _registeredClass = registeredClass;
+            RegisteredClass = registeredClass;
 
-            _connection = connection;
+            Connection = connection;
 
-            _item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
+            Item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
 
-            if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
+            if (RegisteredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey));
+                Statics.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey));
             }
             else
             {
-                Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
+                Statics.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped));
             }
         }
 
-        public DeleteBase<C> Where(Expression<Func<C, object>>? where)
+        public Delete<C> Where(Expression<Func<C, object>>? where)
         {
             where = where.RemoveClosure();
 
             BinaryExpression binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass);
+            WhereExpressionParts = Statics.GetExpressionParts(binaryExpression, RegisteredClass);
 
-            Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
+            Statics.AddParameters(P, RegisteredClass, WhereExpressionParts);
 
             return this;
         }
 
         public override string ToString()
         {
-            if (_item == null)
+            if (Item == null)
             {
                 return GetSqlByExpression();
             }
@@ -89,7 +89,7 @@ namespace Dapper.SqlWriter
 
         public string ToSqlInjectionString()
         {
-            if (_item == null)
+            if (Item == null)
             {
                 return GetSqlByExpression(true);
             }
@@ -101,35 +101,35 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByItem(bool allowSqlInjection = false)
         {
-            if (_item == null) throw new SqlWriterException("Item must not be null.", new ArgumentException());
+            if (Item == null) throw new SqlWriterException("Item must not be null.", new ArgumentException());
 
-            string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" WHERE";
+            string sql = $"DELETE FROM \"{RegisteredClass.DatabaseTableName}\" WHERE";
 
-            if (_registeredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
+            if (RegisteredClass.RegisteredProperties.Any(p => !p.NotMapped && p.IsKey))
             {
-                foreach (RegisteredProperty<C> prop in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
+                foreach (RegisteredProperty<C> prop in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && p.IsKey))
                 {
-                    if (allowSqlInjection && _item != null)
+                    if (allowSqlInjection && Item != null)
                     {
-                        sql = $"{sql} {prop.ToSqlInjectionString(_item)} AND";
+                        sql = $"{sql} {prop.ToSqlInjectionString(Item)} AND";
                     }
                     else
                     {
-                        sql = $"{sql} {prop.ToString()} AND";
+                        sql = $"{sql} {prop} AND";
                     }
                 }
             }
             else
             {
-                foreach (var prop in _registeredClass.RegisteredProperties.Where(p => p.NotMapped))
+                foreach (var prop in RegisteredClass.RegisteredProperties.Where(p => p.NotMapped))
                 {
                     if (allowSqlInjection)
                     {
-                        sql = $"{sql} {prop.ToSqlInjectionString(_item)} AND";
+                        sql = $"{sql} {prop.ToSqlInjectionString(Item)} AND";
                     }
                     else
                     {
-                        sql = $"{sql} {prop.ToString()} AND";
+                        sql = $"{sql} {prop} AND";
                     }
                 }
             }
@@ -141,21 +141,19 @@ namespace Dapper.SqlWriter
 
         private string GetSqlByExpression(bool allowSqlInjection = false)
         {
-            string sql = $"DELETE FROM \"{_registeredClass.DatabaseTableName}\" ";
+            string sql = $"DELETE FROM \"{RegisteredClass.DatabaseTableName}\" ";
 
-            if (_whereExpressionParts.Count > 0)
+            if (WhereExpressionParts.Count > 0)
             {
                 sql = $"{sql}WHERE ";
 
-                //sql = $"{sql}{Statics.ToColumnNameEqualsParameterName(_registeredClass, _whereExpressionParts)} ";
-
                 if (allowSqlInjection)
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                    foreach (var where in WhereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
                 }
                 else
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToString()}";
+                    foreach (var where in WhereExpressionParts) sql = $"{sql} {where}";
                 }                
             }
 
@@ -164,18 +162,11 @@ namespace Dapper.SqlWriter
 
         public async Task<IEnumerable<C>> QueryAsync()
         {
-            if (_item is IDBEvent dBEvent) _ = dBEvent.OnDeleteAsync(_sqlWriter);
+            if (Item is IDBEvent dBEvent) _ = dBEvent.OnDeleteAsync(SqlWriter);
 
-            var result = await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false);
+            IEnumerable<C> result = await QueryAsync(QueryType.Delete, ToString()).ConfigureAwait(false);
 
-            //if (_item is DBObject<C> dbObject && result is DBObject<C> resultDbObject)
-            //{
-            //    dbObject.ObjectState = resultDbObject.ObjectState;
-
-            //    dbObject._oldValues = resultDbObject._oldValues;
-            //}
-
-            if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(_sqlWriter);
+            if (Item is IDBEvent dBEvent1) _ = dBEvent1.OnDeletedAsync(SqlWriter);
 
             return result;
         }

@@ -10,61 +10,61 @@ using Dapper.SqlWriter.Models;
 using MiaPlaza.ExpressionUtils;
 using MiaPlaza.ExpressionUtils.Evaluating;
 using System.Data;
+using System.ComponentModel;
 
 namespace Dapper.SqlWriter
 {
-    public class Select<C> : BaseQuery<C> where C : class
+    public sealed class Select<C> : BaseQuery<C> where C : class
     {
-        private readonly List<ExpressionPart<C>> _selectExpressionParts = new List<ExpressionPart<C>>();
+        private IEnumerable<C>? Results { get; set; } = null;
 
-        private int? _top = null;
+        private List<ExpressionPart<C>> SelectExpressionParts { get; } = new List<ExpressionPart<C>>();
 
-        private int? _limit = null;
+        private int? TopValue { get; set; } = null;
 
-        private double? _topPercent = null;
+        private int? LimitValue { get; set; } = null;
 
-        private Comparison _comparison;
+        private double? TopPercentValue { get; set; } = null;
 
-        private int? _rowNum = null;
+        private Comparison Comparison { get; set; }
 
-        private List<ExpressionPart<C>> _whereExpressionParts = new List<ExpressionPart<C>>();
+        private int? RowNumValue { get; set; } = null;
+
+        private List<ExpressionPart<C>> WhereExpressionParts { get; set; } = new List<ExpressionPart<C>>();
 
         private readonly List<ExpressionPart<C>> _orWhereExpressionParts = new List<ExpressionPart<C>>();
 
-        //private readonly List<ExpressionPart<C>> _andWhereExpressionParts = new List<ExpressionPart<C>>();
+        private string TableNameValue { get; set; } = string.Empty;
 
-        private string _tableName = string.Empty;
-
-        private bool _isDistint;
-
+        private bool IsDistinct { get; set; }
 
         private List<ExpressionPart<C>> _orderByExpressionParts = new List<ExpressionPart<C>>();
 
         internal Select(RegisteredClass<C> registeredClass, SqlWriter sqlWriter, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _sqlWriter = sqlWriter;
+            SqlWriter = sqlWriter;
 
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
-            _logger = logger;
+            Logger = logger;
 
-            _registeredClass = registeredClass;
+            RegisteredClass = registeredClass;
 
-            _tableName = _registeredClass.DatabaseTableName;
+            TableNameValue = RegisteredClass.DatabaseTableName;
 
-            _connection = connection;
+            Connection = connection;
         }
 
         public Select<C> TableName(string tableName)
         {
-            _tableName = tableName;
+            TableNameValue = tableName;
 
             return this;
         }
 
         public Select<C> Options(QueryOptions queryOptions)
         {
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
             return this;
         }
@@ -78,14 +78,14 @@ namespace Dapper.SqlWriter
                 MemberExpression = Statics.GetMemberExpression(column)
             };
 
-            _selectExpressionParts.Add(part);
+            SelectExpressionParts.Add(part);
 
             return this;
         }
 
         public Select<C> Distinct()
         {
-            _isDistint = true;
+            IsDistinct = true;
 
             return this;
         }
@@ -96,9 +96,9 @@ namespace Dapper.SqlWriter
 
             BinaryExpression? binaryExpression = Statics.GetBinaryExpression(where);
 
-            _whereExpressionParts = Statics.GetExpressionParts(binaryExpression, _registeredClass);
+            WhereExpressionParts = Statics.GetExpressionParts(binaryExpression, RegisteredClass);
 
-            Statics.AddParameters(_p, _registeredClass, _whereExpressionParts);
+            Statics.AddParameters(P, RegisteredClass, WhereExpressionParts);
 
             return this;
         }
@@ -116,9 +116,9 @@ namespace Dapper.SqlWriter
 
             _orWhereExpressionParts.Add(new ExpressionPart<C> { Parens = Parens.Left});
 
-            _orWhereExpressionParts.AddRange(Statics.GetExpressionParts(binaryExpression, _registeredClass, null, "orw_"));
+            _orWhereExpressionParts.AddRange(Statics.GetExpressionParts(binaryExpression, RegisteredClass, null, "orw_"));
 
-            Statics.AddParameters(_p, _registeredClass, _orWhereExpressionParts, "orw_");
+            Statics.AddParameters(P, RegisteredClass, _orWhereExpressionParts, "orw_");
 
             _orWhereExpressionParts.Add(new ExpressionPart<C> { Parens = Parens.Right });
 
@@ -171,7 +171,7 @@ namespace Dapper.SqlWriter
         /// <returns></returns>
         public Select<C> Limit(int limit)
         {
-            _limit = limit;
+            LimitValue = limit;
 
             return this;
         }
@@ -183,7 +183,7 @@ namespace Dapper.SqlWriter
         /// <returns></returns>
         public Select<C> Top(int top)
         {
-            _top = top;
+            TopValue = top;
 
             return this;
         }
@@ -195,7 +195,7 @@ namespace Dapper.SqlWriter
         /// <returns></returns>
         public Select<C> TopPercent(int top)
         {
-            _topPercent = top;
+            TopPercentValue = top;
 
             return this;
         }
@@ -208,9 +208,9 @@ namespace Dapper.SqlWriter
         /// <returns></returns>
         public Select<C> RowNum(Comparison comparison, int rowNum)
         {
-            _comparison = comparison;
+            Comparison = comparison;
 
-            _rowNum = rowNum;
+            RowNumValue = rowNum;
 
             return this;
         }
@@ -223,32 +223,32 @@ namespace Dapper.SqlWriter
         {
             string sql = $"SELECT";
 
-            if (_isDistint)
+            if (IsDistinct)
             {
                 sql = $"{sql} DISTINCT";
             }
 
-            if (_top != null)
+            if (TopValue != null)
             {
-                sql = $"{sql} TOP({_top})";
+                sql = $"{sql} TOP({TopValue})";
             }
-            else if (_topPercent != null)
+            else if (TopPercentValue != null)
             {
-                sql = $"{sql} TOP({_topPercent}) PERCENT";
+                sql = $"{sql} TOP({TopPercentValue}) PERCENT";
             }
 
-            if (_selectExpressionParts.Count == 0)
+            if (SelectExpressionParts.Count == 0)
             {
-                foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped))
+                foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped))
                 {
                     sql = $"{sql} \"{property.ColumnName}\",";
                 }
             }
             else
             {
-                foreach (var expression in _selectExpressionParts.Where(e => e.MemberExpression != null))
+                foreach (var expression in SelectExpressionParts.Where(e => e.MemberExpression != null))
                 {
-                    RegisteredProperty<C> registeredProperty = Statics.GetRegisteredProperty(_registeredClass, expression.MemberExpression!);
+                    RegisteredProperty<C> registeredProperty = Statics.GetRegisteredProperty(RegisteredClass, expression.MemberExpression!);
 
                     sql = $"{sql} \"{registeredProperty.ColumnName}\", ";
                 }
@@ -258,30 +258,30 @@ namespace Dapper.SqlWriter
 
             sql = sql[0..^1];
 
-            sql = $"{sql} FROM \"{_tableName}\"";
+            sql = $"{sql} FROM \"{TableNameValue}\"";
 
-            if (_whereExpressionParts.Count > 0 || _orWhereExpressionParts.Count > 0)
+            if (WhereExpressionParts.Count > 0 || _orWhereExpressionParts.Count > 0)
             {
                 sql = $"{sql} WHERE";
             }
 
-            if (_whereExpressionParts.Count > 0)
+            if (WhereExpressionParts.Count > 0)
             {
-                if (_rowNum != null) sql = $"{sql} ROWNUM {_comparison.GetOperator()} {_rowNum}";
+                if (RowNumValue != null) sql = $"{sql} ROWNUM {Comparison.GetOperator()} {RowNumValue}";
 
                 if (allowSqlInjection)
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
+                    foreach (var where in WhereExpressionParts) sql = $"{sql} {where.ToSqlInjectionString()}";
                 }
                 else
                 {
-                    foreach (var where in _whereExpressionParts) sql = $"{sql} {where}";
+                    foreach (var where in WhereExpressionParts) sql = $"{sql} {where}";
                 }
             }
 
             if (_orWhereExpressionParts.Count > 0)
             {
-                if (_whereExpressionParts.Count > 0)
+                if (WhereExpressionParts.Count > 0)
                     sql = $"{sql} AND (";
 
                 if (allowSqlInjection)
@@ -298,7 +298,7 @@ namespace Dapper.SqlWriter
 
                 sql = sql[..^2];
 
-                if (_whereExpressionParts.Count > 0)
+                if (WhereExpressionParts.Count > 0)
                     sql = $"{sql})";
             }
 
@@ -308,7 +308,7 @@ namespace Dapper.SqlWriter
 
                 foreach (var expressionPart in _orderByExpressionParts)
                 {
-                    RegisteredProperty<C> registeredProperty = _registeredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
+                    RegisteredProperty<C> registeredProperty = RegisteredClass.RegisteredProperties.First(p => p.PropertyName == expressionPart.MemberExpression?.Member.Name);
 
                     if (expressionPart.NodeType == ExpressionType.GreaterThan) sql = $"{sql} \"{registeredProperty.ColumnName}\" ASC";
 
@@ -316,7 +316,7 @@ namespace Dapper.SqlWriter
                 }
             }
 
-            if (_limit != null) sql = $"{sql} LIMIT {_limit}";
+            if (LimitValue != null) sql = $"{sql} LIMIT {LimitValue}";
 
             return $"{sql};";
         }
@@ -333,17 +333,19 @@ namespace Dapper.SqlWriter
 
         public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false)).ToList();
 
-        public async Task<List<T>> QueryToListAsync<T>()
+        public async Task<List<T>> QueryToListAsync<T>() where T : class
         {
-            IEnumerable<C> records = await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false);
+            Results = await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
             List<T> results = new List<T>();
 
-            foreach (C record in records)
+            foreach (var result in Results)
             {
-                object recordObject = record;
+                object recordObject = result;
 
-                results.Add((T) recordObject);
+                T item = (T) recordObject;
+
+                results.Add(item);
             }
 
             return results;

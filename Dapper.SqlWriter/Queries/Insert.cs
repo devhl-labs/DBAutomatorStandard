@@ -8,30 +8,30 @@ using System.Data;
 
 namespace Dapper.SqlWriter
 {
-    public class InsertBase<C> : BaseQuery<C> where C : class
+    public sealed class Insert<C> : BaseQuery<C> where C : class
     {
-        protected C _item;
+        private C Item { get; }
 
-        internal InsertBase(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
         {
-            _sqlWriter = dBAutomator;
+            SqlWriter = dBAutomator;
 
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
-            _logger = logger;
+            Logger = logger;
 
-            _registeredClass = registeredClass;
+            RegisteredClass = registeredClass;
 
-            _connection = connection;
+            Connection = connection;
 
-            _item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
+            Item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
 
-            Statics.AddParameters(_p, _item, _registeredClass.RegisteredProperties.Where(p => !p.NotMapped));
+            Statics.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
-        public InsertBase<C> Options(QueryOptions queryOptions)
+        public Insert<C> Options(QueryOptions queryOptions)
         {
-            _queryOptions = queryOptions;
+            QueryOptions = queryOptions;
 
             return this;
         }
@@ -42,9 +42,9 @@ namespace Dapper.SqlWriter
 
         private string GetString(bool allowSqlInjection = false)
         {
-            string sql = $"INSERT INTO \"{_registeredClass.DatabaseTableName}\" (";
+            string sql = $"INSERT INTO \"{RegisteredClass.DatabaseTableName}\" (";
 
-            foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
+            foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
 
             sql = sql[0..^2];
 
@@ -52,21 +52,21 @@ namespace Dapper.SqlWriter
 
             if (allowSqlInjection)
             {
-                foreach (RegisteredProperty<C> registeredProperty in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement))
+                foreach (RegisteredProperty<C> registeredProperty in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement))
                 {
                     if (registeredProperty.PropertyType.GetType() == typeof(string))
                     {
-                        sql = $"{sql}'{registeredProperty.Property.GetValue(_item, null)}', ";
+                        sql = $"{sql}'{registeredProperty.Property.GetValue(Item, null)}', ";
                     }
                     else
                     {
-                        sql = $"{sql}{registeredProperty.Property.GetValue(_item, null)}, ";
+                        sql = $"{sql}{registeredProperty.Property.GetValue(Item, null)}, ";
                     }
                 }
             }
             else
             {
-                foreach (var property in _registeredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
+                foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
             }
 
             sql = sql[0..^2];
@@ -78,11 +78,24 @@ namespace Dapper.SqlWriter
 
         public async Task<C> QueryFirstAsync()
         {
-            if (_item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(_sqlWriter);
+            if (Item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(SqlWriter);
 
             var result = await QueryFirstAsync(QueryType.Insert, ToString()).ConfigureAwait(false);
 
-            if (_item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(_sqlWriter);
+            Statics.FillDatabaseGeneratedProperties(Item, result, SqlWriter);
+
+            if (Item is DBObject dbObject)
+            {
+                dbObject.ObjectState = ObjectState.InDatabase;
+
+                dbObject.QueryType = QueryType.Insert;
+
+                dbObject.StoreState<C>(SqlWriter);
+            }
+
+            if (Item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(SqlWriter);
+
+
 
             return result;
         }

@@ -248,5 +248,16 @@ namespace Dapper.SqlWriter
 
             return exp;
         }
+
+        public static void FillDatabaseGeneratedProperties<C>(C? userInput, C? databaseOutput, SqlWriter sqlWriter) where C : class
+        {
+            if (userInput == null || databaseOutput == null)
+                return;
+
+            RegisteredClass<C> registeredClass = (RegisteredClass<C>) sqlWriter.RegisteredClasses.First(r => r is RegisteredClass<C>);
+
+            foreach (RegisteredProperty<C> registeredProperty in registeredClass.RegisteredProperties.Where(p => p.IsAutoIncrement))
+                registeredProperty.Property.SetValue(userInput, registeredProperty.Property.GetValue(databaseOutput, null));
+        }
     }
 }

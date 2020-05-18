@@ -1,32 +1,28 @@
 ﻿using Dapper.SqlWriter.Interfaces;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics.SymbolStore;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Dapper.SqlWriter
 {
-    public delegate void IsAvailableChangedEventHandler(bool isAvailable);
-
-
-    public delegate void SlowQueryWarningEventHandler(string methodName, TimeSpan timeSpan);
-
-
     public class SqlWriter : IDisposable
     {
-        internal readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
+        public delegate Task SlowQueryEventHandler(object sender, SlowQueryEventArgs e);
 
-        public event SlowQueryWarningEventHandler? OnSlowQueryDetected;
+        internal SemaphoreSlim SemaphoreSlim { get; } = new SemaphoreSlim(1);
+
+        public event SlowQueryEventHandler SlowQuery;
 
         public ILogger? Logger { get; }
 
 
-        private const string _source = nameof(SqlWriter);
-
-
-        public readonly List<object> RegisteredClasses = new List<object>();
+        public List<object> RegisteredClasses { get; } = new List<object>();
 
         public QueryOptions QueryOptions { get; } = new QueryOptions();
 
@@ -57,22 +53,6 @@ namespace Dapper.SqlWriter
             }
         }
 
-        //public RegisteredClass<T> Register<T>() where T : DBObject<T>
-        //{
-        //    try
-        //    {
-        //        var registeredClass = new RegisteredClass<T>();
-
-        //        RegisteredClasses.Add(registeredClass);
-
-        //        return registeredClass;
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        throw new SqlWriterException(e.Message, e);
-        //    }
-        //}
-
         public RegisteredClass<C> Register<C>(string tableName) where C : class
         {
             var item = Register<C>();
@@ -82,7 +62,8 @@ namespace Dapper.SqlWriter
             return item;            
         }
 
-        internal void SlowQueryDetected(string sql, TimeSpan timeSpan) => OnSlowQueryDetected?.Invoke(sql, timeSpan);
+        internal void OnSlowQuery(object query, TimeSpan timeSpan, string sqlInjectString) => SlowQuery?.Invoke(this, new SlowQueryEventArgs(query, timeSpan, sqlInjectString));
+
 
         public Select<C> Select<C>() where C : class
         {
@@ -91,44 +72,44 @@ namespace Dapper.SqlWriter
             return new Select<C>(registeredClass, this, Connection, QueryOptions, Logger);
         }
 
-        public DeleteBase<C> Delete<C>() where C : class
+        public Delete<C> Delete<C>() where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new DeleteBase<C>(registeredClass, this, Connection, QueryOptions, Logger);
+            return new Delete<C>(registeredClass, this, Connection, QueryOptions, Logger);
         }
 
-        public DeleteBase<C> Delete<C>(C item) where C : class
+        public Delete<C> Delete<C>(C item) where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new DeleteBase<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
+            return new Delete<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
         }
 
-        public InsertBase<C> Insert<C>(C item) where C : class
+        public Insert<C> Insert<C>(C item) where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new InsertBase<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
+            return new Insert<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
         }
 
-        public UpdateBase<C> Update<C>(C item) where C : class
+        public Update<C> Update<C>(C item) where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new UpdateBase<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
+            return new Update<C>(item, registeredClass, this, Connection, QueryOptions, Logger);
         }
 
-        public UpdateBase<C> Update<C>() where C : class
+        public Update<C> Update<C>() where C : class
         {
             RegisteredClass<C> registeredClass = (RegisteredClass<C>) RegisteredClasses.First(r => r is RegisteredClass<C>);
 
-            return new UpdateBase<C>(registeredClass, this, Connection, QueryOptions, Logger);
+            return new Update<C>(registeredClass, this, Connection, QueryOptions, Logger);
         }
 
         public void Dispose()
         {
-            _semaphoreSlim.Dispose();
+            SemaphoreSlim.Dispose();
         }
     }
 }
