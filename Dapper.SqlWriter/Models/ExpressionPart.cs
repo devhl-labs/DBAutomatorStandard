@@ -31,7 +31,7 @@ namespace Dapper.SqlWriter.Models
 
             if (result != null) return result;
 
-            object value = RegisteredProperty.ToDatabaseColumn(RegisteredProperty, ConstantExpression.Value);
+            object? value = RegisteredProperty.ToDatabaseColumn(RegisteredProperty, ConstantExpression.Value);
 
             if (value.GetType() == typeof(string))
             {

@@ -6,6 +6,8 @@ using System.Data;
 using System.Diagnostics.SymbolStore;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,11 +26,11 @@ namespace Dapper.SqlWriter
 
         public List<object> RegisteredClasses { get; } = new List<object>();
 
-        public QueryOptions QueryOptions { get; } = new QueryOptions();
+        public SqlWriterConfiguration QueryOptions { get; } = new SqlWriterConfiguration();
 
         public IDbConnection Connection { get; }
 
-        public SqlWriter(IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        public SqlWriter(IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             Logger = logger;
 
@@ -41,7 +43,7 @@ namespace Dapper.SqlWriter
         {
             try
             {
-                var registeredClass = new RegisteredClass<C>();
+                var registeredClass = new RegisteredClass<C>(this);
 
                 RegisteredClasses.Add(registeredClass);
 
@@ -111,5 +113,11 @@ namespace Dapper.SqlWriter
         {
             SemaphoreSlim.Dispose();
         }
+
+        public Capitalization Capitalization { get; set; } = Capitalization.Default;
+
+        internal List<PropertyMap> PropertyMaps { get; } = new List<PropertyMap>();
+
+        public void AddPropertyMap(PropertyMap p) => PropertyMaps.Add(p);   
     }
 }

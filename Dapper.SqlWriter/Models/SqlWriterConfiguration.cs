@@ -3,7 +3,7 @@ using System.Data;
 
 namespace Dapper.SqlWriter
 {
-    public class QueryOptions
+    public class SqlWriterConfiguration
     {
         public TimeSpan SlowQueryWarning { get; set; } = TimeSpan.FromSeconds(5);
 

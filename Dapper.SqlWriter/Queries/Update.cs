@@ -21,7 +21,7 @@ namespace Dapper.SqlWriter
 
         private List<ExpressionPart<C>> WhereExpressionParts { get; set; } = new List<ExpressionPart<C>>();
 
-        internal Update(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Update(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = dBAutomator;
 
@@ -49,7 +49,7 @@ namespace Dapper.SqlWriter
             }
         }
 
-        internal Update(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Update(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = dBAutomator;
 
@@ -62,7 +62,7 @@ namespace Dapper.SqlWriter
             Connection = connection;
         }
 
-        public Update<C> Options(QueryOptions queryOptions)
+        public Update<C> Options(SqlWriterConfiguration queryOptions)
         {
             QueryOptions = queryOptions;
 

@@ -16,7 +16,7 @@ namespace Dapper.SqlWriter
 
         protected SqlWriter SqlWriter { get; set; }
 
-        protected QueryOptions QueryOptions { get; set; }
+        protected SqlWriterConfiguration QueryOptions { get; set; }
 
         protected RegisteredClass<C> RegisteredClass { get; set; }
 

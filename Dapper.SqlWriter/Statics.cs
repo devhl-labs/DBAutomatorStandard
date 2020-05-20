@@ -13,6 +13,13 @@ using System.Threading.Tasks;
 
 namespace Dapper.SqlWriter
 {
+    public enum Capitalization
+    {
+        Default,
+        Upper,
+        Lower
+    }
+
     internal static class Statics
     {
         public static string GetOperator(this Comparison comparison)
@@ -48,10 +55,49 @@ namespace Dapper.SqlWriter
 
                 i++;
 
-                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, expression.ConstantExpression.Value));
+                p.Add(parameterName, ToDatabaseColumn(registeredProperty, expression.ConstantExpression.Value));
+
+                //if (registeredProperty.ToDatabaseColumn != null)
+                //{
+                //    p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, expression.ConstantExpression.Value));
+                //}
+                //else
+                //{
+                //    PropertyMap? propertyMap = registeredClass.SqlWriter.PropertyMaps.FirstOrDefault(pm => pm.PropertyType == registeredProperty.PropertyType);
+
+                //    if (propertyMap != null)
+                //    {
+                //        p.Add(parameterName, propertyMap.ToDatabaseColumn(expression.ConstantExpression.Value));
+                //    }
+                //    else
+                //    {
+                //        p.Add(parameterName, expression.ConstantExpression.Value);
+                //    }
+                //}
             }
 
             return;
+        }
+
+        public static object? ToDatabaseColumn<C>(RegisteredProperty<C> registeredProperty, object value) where C : class
+        {
+            if (registeredProperty.ToDatabaseColumn != null)
+            {
+                return registeredProperty.ToDatabaseColumn(registeredProperty, value);
+            }
+            else
+            {
+                PropertyMap? propertyMap = registeredProperty.SqlWriter.PropertyMaps.FirstOrDefault(pm => pm.PropertyType == registeredProperty.PropertyType);
+
+                if (propertyMap != null)
+                {
+                    return propertyMap.ToDatabaseColumn(value);
+                }
+                else
+                {
+                    return value;
+                }
+            }
         }
 
         public static void AddParameters<C>(DynamicParameters p, C item, IEnumerable<RegisteredProperty<C>> registeredProperties, string parameterPrefix = "w_") where C : class
@@ -62,7 +108,9 @@ namespace Dapper.SqlWriter
             {
                 string parameterName = $"@{parameterPrefix}{registeredProperty.ColumnName}";
 
-                p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, registeredProperty.Property.GetValue(item, null)));
+                p.Add(parameterName, ToDatabaseColumn(registeredProperty, registeredProperty.Property.GetValue(item, null)));
+
+                //p.Add(parameterName, registeredProperty.ToDatabaseColumn(registeredProperty, registeredProperty.Property.GetValue(item, null)));
             }
         }
 

@@ -40,7 +40,7 @@ namespace Dapper.SqlWriter
 
         private List<ExpressionPart<C>> _orderByExpressionParts = new List<ExpressionPart<C>>();
 
-        internal Select(RegisteredClass<C> registeredClass, SqlWriter sqlWriter, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Select(RegisteredClass<C> registeredClass, SqlWriter sqlWriter, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = sqlWriter;
 
@@ -62,7 +62,7 @@ namespace Dapper.SqlWriter
             return this;
         }
 
-        public Select<C> Options(QueryOptions queryOptions)
+        public Select<C> Options(SqlWriterConfiguration queryOptions)
         {
             QueryOptions = queryOptions;
 

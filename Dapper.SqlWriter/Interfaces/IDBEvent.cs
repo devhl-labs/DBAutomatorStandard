@@ -2,9 +2,6 @@
 
 namespace Dapper.SqlWriter.Interfaces
 {
-    /// <summary>
-    /// These events will only fire if you provide this library an instantiated object. 
-    /// </summary>
     public interface IDBEvent
     {
         Task OnInsertAsync(SqlWriter dBAutomator);

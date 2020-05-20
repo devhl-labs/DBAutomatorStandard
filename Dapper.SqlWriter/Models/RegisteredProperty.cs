@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 
 namespace Dapper.SqlWriter
@@ -27,7 +28,7 @@ namespace Dapper.SqlWriter
         /// <summary>
         /// This function controls how your data will be converted from a C# type to a type that can be stored in your database.
         /// </summary>
-        public Func<RegisteredProperty<C>, object, object?> ToDatabaseColumn { get; set; } = DefaultToDatabaseColumn;
+        public Func<RegisteredProperty<C>, object, object?>? ToDatabaseColumn { get; set; } /*= DefaultToDatabaseColumn;*/
 
         public override string ToString() => ToString("w_");
 
@@ -46,6 +47,12 @@ namespace Dapper.SqlWriter
 
         }
 
-        public static object DefaultToDatabaseColumn(RegisteredProperty<C> registeredProperty, object value) => value;
+        //public static object DefaultToDatabaseColumn(RegisteredProperty<C> registeredProperty, object value) => value;
+
+#nullable disable
+
+        public SqlWriter SqlWriter { get; internal set; }
+
+#nullable enable
     }
 }

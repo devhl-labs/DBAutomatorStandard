@@ -18,7 +18,7 @@ namespace Dapper.SqlWriter
 
         private C? Item { get; set; }
 
-        internal Delete(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = dBAutomator;
 
@@ -31,14 +31,14 @@ namespace Dapper.SqlWriter
             Connection = connection;
         }
 
-        public Delete<C> Options(QueryOptions queryOptions)
+        public Delete<C> Options(SqlWriterConfiguration queryOptions)
         {
             QueryOptions = queryOptions;
 
             return this;
         }
 
-        internal Delete(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Delete(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = dBAutomator;
 

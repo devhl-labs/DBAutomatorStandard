@@ -7,6 +7,7 @@ using Dapper;
 using System.Linq.Expressions;
 using MiaPlaza.ExpressionUtils;
 using MiaPlaza.ExpressionUtils.Evaluating;
+using Newtonsoft.Json.Serialization;
 
 namespace Dapper.SqlWriter
 {
@@ -16,8 +17,12 @@ namespace Dapper.SqlWriter
 
         public List<RegisteredProperty<C>> RegisteredProperties { get; set; } = new List<RegisteredProperty<C>>();
 
-        public RegisteredClass()
+        public SqlWriter SqlWriter { get; internal set; }
+
+        public RegisteredClass(SqlWriter sqlWriter)
         {
+            SqlWriter = sqlWriter;
+
             DatabaseTableName = GetTableName();
 
             Dictionary<string, string> columnMaps = new Dictionary<string, string>();
@@ -38,7 +43,9 @@ namespace Dapper.SqlWriter
 
                     PropertyType = property.PropertyType,
 
-                    NotMapped = !property.IsStorable()                    
+                    NotMapped = !property.IsStorable(),
+
+                    SqlWriter = sqlWriter
                 };
 
                 registeredProperty.RegisteredClass = this;
@@ -118,13 +125,25 @@ namespace Dapper.SqlWriter
 
             RegisteredProperties.First(p => p.PropertyName == member.Member.Name).ColumnName = columnName;
 
+            ColumnMap(member.Member.Name, columnName);
+
+            //_columnMap ??= new ColumnMap();
+
+            //_columnMap.Add(member.Member.Name, columnName);
+
+            //SqlMapper.SetTypeMap(typeof(C), new CustomPropertyTypeMap(typeof(C), (type, columnName) => type.GetProperty(_columnMap[columnName])));
+
+            return this;
+        }
+
+        private void ColumnMap(string memberName, string columnName)
+        {
             _columnMap ??= new ColumnMap();
 
-            _columnMap.Add(member.Member.Name, columnName);
+            _columnMap.Add(memberName, columnName);
 
             SqlMapper.SetTypeMap(typeof(C), new CustomPropertyTypeMap(typeof(C), (type, columnName) => type.GetProperty(_columnMap[columnName])));
 
-            return this;
         }
 
         private bool IsAutoIncrement(PropertyInfo property)
@@ -156,19 +175,34 @@ namespace Dapper.SqlWriter
                 result = tableNameAttribute.Name;
             }
 
+            if (SqlWriter.Capitalization == Capitalization.Lower)
+                return result.ToLower();
+
+            if (SqlWriter.Capitalization == Capitalization.Upper)
+                return result.ToUpper();
+
             return result;
         }
 
         private string GetColumnName(PropertyInfo property)
         {
-            string result = property.Name;
+            string memberName = property.Name;
+
+            string columnName = property.Name;
+
+            if (SqlWriter.Capitalization == Capitalization.Lower)
+                columnName = memberName.ToLower();
+
+            if (SqlWriter.Capitalization == Capitalization.Upper)
+                columnName = memberName.ToUpper();
 
             if (property.GetCustomAttributes<ColumnAttribute>(true).FirstOrDefault() is ColumnAttribute columnNameAttribute)
-            {
-                result = columnNameAttribute.Name;
-            }
+                columnName = columnNameAttribute.Name;
 
-            return result;
+            if (memberName != columnName)
+                ColumnMap(memberName, columnName);
+
+            return columnName;
         }
 
         public RegisteredProperty<C> RegisteredProperty(Expression<Func<C, object>> key)

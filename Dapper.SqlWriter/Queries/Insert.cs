@@ -12,7 +12,7 @@ namespace Dapper.SqlWriter
     {
         private C Item { get; }
 
-        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, QueryOptions queryOptions, ILogger? logger = null)
+        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
         {
             SqlWriter = dBAutomator;
 
@@ -29,7 +29,7 @@ namespace Dapper.SqlWriter
             Statics.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
-        public Insert<C> Options(QueryOptions queryOptions)
+        public Insert<C> Options(SqlWriterConfiguration queryOptions)
         {
             QueryOptions = queryOptions;
 
