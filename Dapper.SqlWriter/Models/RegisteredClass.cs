@@ -168,7 +168,7 @@ namespace Dapper.SqlWriter
 
         private string GetTableName()
         {
-            string result = typeof(C).Name;
+            string result = SqlWriter.ToTableName(typeof(C).Name);
 
             if (typeof(C).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
             {

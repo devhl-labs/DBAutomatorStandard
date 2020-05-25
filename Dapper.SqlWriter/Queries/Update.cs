@@ -257,7 +257,7 @@ namespace Dapper.SqlWriter
             else
             {
                 foreach (ExpressionPart<C> set in SetExpressionParts.Where(s => s.ConstantExpression != null && s.MemberExpression != null)) 
-                    sql = $"{sql}{set.GetSetString()}, ";
+                    sql = $"{sql} {set.GetSetString()}, ";
             }
 
             if (sql.EndsWith(", "))
