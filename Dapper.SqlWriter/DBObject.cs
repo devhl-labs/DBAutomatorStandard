@@ -40,13 +40,11 @@ namespace Dapper.SqlWriter
                 tObj.QueryType = Dapper.SqlWriter.QueryType.Update;
             }
 
-            Statics.FillDatabaseGeneratedProperties(tObj, result, sqlWriter);
+            Utils.FillDatabaseGeneratedProperties(tObj, result, sqlWriter);
 
-            tObj.ObjectState = ObjectState.InDatabase; //  result.ObjectState;
+            tObj.ObjectState = ObjectState.InDatabase;
 
-            tObj.StoreState<T>(sqlWriter); // result.OldValues;
-
-            //tObj.QueryType = result.QueryType;
+            tObj.StoreState<T>(sqlWriter);
         }
 
         private string GetState<T>(SqlWriter sqlWriter) where T : class
@@ -59,16 +57,14 @@ namespace Dapper.SqlWriter
 
             RegisteredClass<T> registeredClass = (RegisteredClass<T>)sqlWriter.RegisteredClasses.First(r => r is RegisteredClass<T>);
 
-            foreach (var prop in registeredClass.RegisteredProperties.Where(p => !p.NotMapped).OrderBy(p => p.PropertyName))
-            {
+            foreach (var prop in registeredClass.RegisteredProperties.Where(p => !p.NotMapped).OrderBy(p => p.Property.Name))            
                 result = $"{result}{prop.Property.GetValue(tObj, null)};";
-            }
 
             return result[..^1];
         }
 
         internal void StoreState<T>(SqlWriter sqlWriter) where T : class => OldValues = GetState<T>(sqlWriter);
 
-        public bool IsDirty<T>(SqlWriter sqlWriter) where T : class => OldValues != GetState<T>(sqlWriter) ? true : false;
+        public bool IsDirty<T>(SqlWriter sqlWriter) where T : class => OldValues != GetState<T>(sqlWriter);
     }
 }

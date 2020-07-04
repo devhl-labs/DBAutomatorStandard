@@ -1,23 +1,29 @@
-﻿using Dapper.SqlWriter.Interfaces;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Diagnostics;
-using System.Text;
 
 namespace Dapper.SqlWriter.Models
 {
-    public class QueryFailure : IQueryResult
+    public class QueryFailure
     {
-#nullable disable
+        public QueryFailure(string method, Exception e, string sql, Stopwatch stopwatch)
+        {
+            Method = method;
+
+            Exception = e;
+
+            Sql = sql;
+
+            Stopwatch = stopwatch;
+        }
 
         public DateTime DateTimeUTC => DateTime.UtcNow;
 
-        public string Sql { get; internal set; }
+        public string Sql { get; }
 
-        public string Method { get; internal set; }
+        public string Method { get; }
 
-        public Exception Exception { get; internal set; }
+        public Exception Exception { get; }
 
-        public Stopwatch Stopwatch { get; internal set; }
+        public Stopwatch Stopwatch { get; }
     }
 }

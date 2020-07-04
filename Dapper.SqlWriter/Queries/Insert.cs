@@ -12,26 +12,20 @@ namespace Dapper.SqlWriter
     {
         private C Item { get; }
 
-        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter dBAutomator, IDbConnection connection, SqlWriterConfiguration queryOptions, ILogger? logger = null)
+        internal Insert(C item, RegisteredClass<C> registeredClass, SqlWriter sqlWriter)
         {
-            SqlWriter = dBAutomator;
-
-            QueryOptions = queryOptions;
-
-            Logger = logger;
+            SqlWriter = sqlWriter;
 
             RegisteredClass = registeredClass;
 
-            Connection = connection;
-
             Item = item ?? throw new SqlWriterException("Item must not be null.", new ArgumentException());
 
-            Statics.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped));
+            Utils.AddParameters(P, Item, RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped));
         }
 
-        public Insert<C> Options(SqlWriterConfiguration queryOptions)
+        public Insert<C> TimeOut(int value)
         {
-            QueryOptions = queryOptions;
+            CommandTimeOut = value;
 
             return this;
         }
@@ -44,7 +38,8 @@ namespace Dapper.SqlWriter
         {
             string sql = $"INSERT INTO \"{RegisteredClass.DatabaseTableName}\" (";
 
-            foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}\"{property.ColumnName}\", ";
+            foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) 
+                sql = $"{sql}\"{property.ColumnName}\", ";
 
             sql = sql[0..^2];
 
@@ -54,35 +49,33 @@ namespace Dapper.SqlWriter
             {
                 foreach (RegisteredProperty<C> registeredProperty in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement))
                 {
-                    if (registeredProperty.PropertyType.GetType() == typeof(string))
-                    {
-                        sql = $"{sql}'{registeredProperty.Property.GetValue(Item, null)}', ";
-                    }
-                    else
-                    {
-                        sql = $"{sql}{registeredProperty.Property.GetValue(Item, null)}, ";
-                    }
+                    if (registeredProperty.Property.PropertyType.GetType() == typeof(string))                    
+                        sql = $"{sql}'{registeredProperty.Property.GetValue(Item, null)}', ";                    
+                    else                    
+                        sql = $"{sql}{registeredProperty.Property.GetValue(Item, null)}, ";                    
                 }
             }
             else
             {
-                foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) sql = $"{sql}@w_{property.ColumnName}, ";
+                foreach (var property in RegisteredClass.RegisteredProperties.Where(p => !p.NotMapped && !p.IsAutoIncrement)) 
+                    sql = $"{sql}@w_{property.ColumnName}, ";
             }
 
             sql = sql[0..^2];
 
-            sql = $"{sql}) RETURNING *;";
+            sql = $"{sql}) ";
 
             return sql;
         }
 
         public async Task<C> QueryFirstAsync()
         {
-            if (Item is IDBEvent dBEvent) _ = dBEvent.OnInsertAsync(SqlWriter);
+            if (Item is IDBEvent dBEvent) 
+                _ = dBEvent.OnInsertAsync(SqlWriter);
 
-            var result = await QueryFirstAsync(QueryType.Insert, ToString()).ConfigureAwait(false);
+            var result = await QueryFirstAsync(QueryType.Insert, $"{ToString()}RETURNING *;").ConfigureAwait(false);
 
-            Statics.FillDatabaseGeneratedProperties(Item, result, SqlWriter);
+            Utils.FillDatabaseGeneratedProperties(Item, result, SqlWriter);
 
             if (Item is DBObject dbObject)
             {
@@ -93,11 +86,32 @@ namespace Dapper.SqlWriter
                 dbObject.StoreState<C>(SqlWriter);
             }
 
-            if (Item is IDBEvent dBEvent1) _ = dBEvent1.OnInsertedAsync(SqlWriter);
+            if (Item is IDBEvent dBEvent1) 
+                _ = dBEvent1.OnInsertedAsync(SqlWriter);
 
 
 
             return result;
+        }
+
+        public async Task ExecuteAsync()
+        {
+            if (Item is IDBEvent dBEvent)
+                _ = dBEvent.OnInsertAsync(SqlWriter);
+
+            await ExecuteAsync($"{ToString()};").ConfigureAwait(false);
+
+            if (Item is DBObject dbObject)
+            {
+                dbObject.ObjectState = ObjectState.InDatabase;
+
+                dbObject.QueryType = QueryType.Insert;
+
+                dbObject.StoreState<C>(SqlWriter);
+            }
+
+            if (Item is IDBEvent dBEvent1)
+                _ = dBEvent1.OnInsertedAsync(SqlWriter);
         }
     }
 }

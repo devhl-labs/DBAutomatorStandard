@@ -14,25 +14,4 @@ namespace TestDatabaseLibrary
 		[Column("Address")]
 		public string UserAddress { get; set; } = string.Empty;
 	}
-
-
-
-
-
-
-
-/*
-BEGIN;
-
--- CREATE TABLE "Address" --------------------------------------
-CREATE TABLE "public"."Address" ( 
-	"AddressID" Bigint DEFAULT nextval('"Address_AddressID_seq"'::regclass) NOT NULL,
-	"UserID" Bigint NOT NULL,
-	"Address" Text NOT NULL,
-	PRIMARY KEY ( "AddressID" ) );
- ;
--- -------------------------------------------------------------
-
-COMMIT;
-*/
 }

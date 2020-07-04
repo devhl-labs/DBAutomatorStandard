@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
-
-using Dapper;
 using System.Linq.Expressions;
 using MiaPlaza.ExpressionUtils;
 using MiaPlaza.ExpressionUtils.Evaluating;
-using Newtonsoft.Json.Serialization;
+using System.Threading.Tasks;
+using System.Data;
 
 namespace Dapper.SqlWriter
 {
@@ -29,45 +28,29 @@ namespace Dapper.SqlWriter
 
             foreach (PropertyInfo property in typeof(C).GetProperties())
             {
-                RegisteredProperty<C> registeredProperty = new RegisteredProperty<C>
+                RegisteredProperty<C> registeredProperty = new RegisteredProperty<C>(this, property, SqlWriter)
                 {
-                    Property = property,
-
                     ColumnName = GetColumnName(property),
 
                     IsKey = IsKey(property),
 
                     IsAutoIncrement = IsAutoIncrement(property),
 
-                    PropertyName = $"{property.Name}",
-
-                    PropertyType = property.PropertyType,
-
-                    NotMapped = !property.IsStorable(),
-
-                    SqlWriter = sqlWriter
+                    NotMapped = !property.IsStorable()
                 };
-
-                registeredProperty.RegisteredClass = this;
 
                 RegisteredProperties.Add(registeredProperty);
 
-                if (registeredProperty.PropertyName != registeredProperty.ColumnName)
-                {
-                    columnMaps.Add(registeredProperty.ColumnName, registeredProperty.PropertyName);
-                }
+                if (registeredProperty.Property.Name != registeredProperty.ColumnName)                
+                    columnMaps.Add(registeredProperty.ColumnName, registeredProperty.Property.Name);                
             }
 
             var mapper = new Func<Type, string, PropertyInfo>((type, columnName) =>
             {
-                if (columnMaps.ContainsKey(columnName))
-                {
-                    return type.GetProperty(columnMaps[columnName]);
-                }
-                else
-                {
-                    return type.GetProperty(columnName);
-                }
+                if (columnMaps.ContainsKey(columnName))                
+                    return type.GetProperty(columnMaps[columnName]);                
+                else                
+                    return type.GetProperty(columnName);                
             });
 
             var map = new CustomPropertyTypeMap(typeof(C), (type, columnName) => mapper(type, columnName));
@@ -79,9 +62,9 @@ namespace Dapper.SqlWriter
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression member = Statics.GetMemberExpression(key);
+            MemberExpression member = Utils.GetMemberExpression(key);
 
-            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).NotMapped = true;
+            RegisteredProperties.First(p => p.Property.Name == member.Member.Name).NotMapped = true;
 
             return this;
         }
@@ -90,9 +73,9 @@ namespace Dapper.SqlWriter
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression member = Statics.GetMemberExpression(key);
+            MemberExpression member = Utils.GetMemberExpression(key);
 
-            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).IsKey = true;
+            RegisteredProperties.First(p => p.Property.Name == member.Member.Name).IsKey = true;
 
             return this;
         }
@@ -101,9 +84,9 @@ namespace Dapper.SqlWriter
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression member = Statics.GetMemberExpression(key);
+            MemberExpression member = Utils.GetMemberExpression(key);
 
-            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).IsAutoIncrement = true;
+            RegisteredProperties.First(p => p.Property.Name == member.Member.Name).IsAutoIncrement = true;
 
             return this;
         }
@@ -121,17 +104,11 @@ namespace Dapper.SqlWriter
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression member = Statics.GetMemberExpression(key);
+            MemberExpression member = Utils.GetMemberExpression(key);
 
-            RegisteredProperties.First(p => p.PropertyName == member.Member.Name).ColumnName = columnName;
+            RegisteredProperties.First(p => p.Property.Name == member.Member.Name).ColumnName = columnName;
 
             ColumnMap(member.Member.Name, columnName);
-
-            //_columnMap ??= new ColumnMap();
-
-            //_columnMap.Add(member.Member.Name, columnName);
-
-            //SqlMapper.SetTypeMap(typeof(C), new CustomPropertyTypeMap(typeof(C), (type, columnName) => type.GetProperty(_columnMap[columnName])));
 
             return this;
         }
@@ -148,20 +125,16 @@ namespace Dapper.SqlWriter
 
         private bool IsAutoIncrement(PropertyInfo property)
         {
-            if (Attribute.IsDefined(property, typeof(AutoIncrementAttribute)))
-            {
-                return true;
-            }
+            if (Attribute.IsDefined(property, typeof(AutoIncrementAttribute)))            
+                return true;            
 
             return false;
         }
 
         private bool IsKey(PropertyInfo property)
         {
-            if (Attribute.IsDefined(property, typeof(KeyAttribute)))
-            {
-                return true;
-            }
+            if (Attribute.IsDefined(property, typeof(KeyAttribute)))            
+                return true;            
 
             return false;
         }
@@ -170,10 +143,8 @@ namespace Dapper.SqlWriter
         {
             string result = SqlWriter.ToTableName(typeof(C).Name);
 
-            if (typeof(C).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)
-            {
-                result = tableNameAttribute.Name;
-            }
+            if (typeof(C).GetCustomAttributes<TableAttribute>(true).FirstOrDefault() is TableAttribute tableNameAttribute)            
+                result = tableNameAttribute.Name;            
 
             if (SqlWriter.Capitalization == Capitalization.Lower)
                 return result.ToLower();
@@ -209,9 +180,16 @@ namespace Dapper.SqlWriter
         {
             key = PartialEvaluator.PartialEvalBody(key, ExpressionInterpreter.Instance);
 
-            MemberExpression memberExpression = Statics.GetMemberExpression(key);
+            MemberExpression memberExpression = Utils.GetMemberExpression(key);
 
-            return RegisteredProperties.First(p => p.PropertyName == memberExpression.Member.Name);
+            return RegisteredProperties.First(p => p.Property.Name == memberExpression.Member.Name);
+        }
+
+        public Func<string, string, DynamicParameters, IDbConnection, int?, Task<IEnumerable<C>>> QueryAsync = DefaultQueryAsync;
+
+        private static async Task<IEnumerable<C>> DefaultQueryAsync(string sql, string splitOn, DynamicParameters p, IDbConnection connection, int? commandTimeOut)
+        {
+            return await connection.QueryAsync<C>(sql, p, null, commandTimeOut).ConfigureAwait(false);
         }
     }
 }

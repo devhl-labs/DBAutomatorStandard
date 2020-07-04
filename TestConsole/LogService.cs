@@ -1,56 +1,50 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿//using System;
+//using System.Threading.Tasks;
+//using Dapper.SqlWriter;
+//using Dapper.SqlWriter.Interfaces;
+//using Dapper.SqlWriter.Models;
 
-using Dapper.SqlWriter.Interfaces;
-using Dapper.SqlWriter.Models;
+//namespace TestConsole
+//{
+//    public class LogService
+//    {
+//        public LogService(SqlWriter sqlWriter)
+//        {
+//            sqlWriter.QueryFailure += 
+//        }
 
-namespace TestConsole
-{
-    public class LogService : ILogger
-    {
-        private static readonly object _logLock = new object();
+//        private static readonly object _logLock = new object();
 
-        private static void ResetConsoleColor()
-        {
-            Console.BackgroundColor = ConsoleColor.Black;
-            Console.ForegroundColor = ConsoleColor.Gray;
-        }
+//        private static void ResetConsoleColor()
+//        {
+//            Console.BackgroundColor = ConsoleColor.Black;
+//            Console.ForegroundColor = ConsoleColor.Gray;
+//        }
 
-        private static void PrintLogTitle(IQueryResult queryResult)
-        {
-            switch (queryResult)
-            {
-                case QuerySuccess _:
-                    Console.ForegroundColor = ConsoleColor.DarkGreen;
-                    Console.BackgroundColor = ConsoleColor.Black;
-                    Console.Write("[success] ");
-                    break;
+//        private static void PrintLogTitle(QueryFailure queryFailure)
+//        {
+//            Console.ForegroundColor = ConsoleColor.White;
+//            Console.BackgroundColor = ConsoleColor.Red;
+//            Console.Write("[failure] ");           
 
-                case QueryFailure _:
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.BackgroundColor = ConsoleColor.Red;
-                    Console.Write("[failure] ");
-                    break;
-            }
-
-            ResetConsoleColor();
-        }
+//            ResetConsoleColor();
+//        }
 
 
-        public Task QueryExecuted(IQueryResult queryResult)
-        {
-            lock (_logLock)
-            {
-                PrintLogTitle(queryResult);
+//        public Task QueryExecuted(QueryFailure queryFailure)
+//        {
+//            lock (_logLock)
+//            {
+//                PrintLogTitle(queryFailure);
 
-                Console.Write(queryResult.Sql);
+//                Console.Write(queryFailure.Sql);
 
-                if (queryResult is QueryFailure failure) Console.Write(" " + failure.Exception.Message);
+//                Console.Write(" " + queryFailure.Exception.Message);
 
-                Console.WriteLine();
-            }
+//                Console.WriteLine();
+//            }
 
-            return Task.CompletedTask;
-        }
-    }
-}
+//            return Task.CompletedTask;
+//        }
+//    }
+//}

@@ -1,11 +1,8 @@
-﻿using Dapper.SqlWriter.Interfaces;
-using Dapper.SqlWriter.Models;
+﻿using Dapper.SqlWriter.Models;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Dapper.SqlWriter
@@ -16,15 +13,11 @@ namespace Dapper.SqlWriter
 
         protected SqlWriter SqlWriter { get; set; }
 
-        protected SqlWriterConfiguration QueryOptions { get; set; }
-
         protected RegisteredClass<C> RegisteredClass { get; set; }
-
-        protected IDbConnection Connection { get; set; }
 
 #nullable enable
 
-        protected ILogger? Logger { get; set; }
+        public int ParameterIndex { get; set; }
 
         protected DynamicParameters P { get; set; } = new DynamicParameters();
 
@@ -41,7 +34,7 @@ namespace Dapper.SqlWriter
         {
             stopwatch.Stop();
 
-            if (stopwatch.Elapsed > QueryOptions.SlowQueryWarning) //SqlWriter.SlowQueryDetected(methodName, stopwatch.Elapsed);
+            if (stopwatch.Elapsed > SqlWriter.Config.SlowQueryWarning)
                 SqlWriter.OnSlowQuery(this, stopwatch.Elapsed, sql);
         }
 
@@ -66,21 +59,22 @@ namespace Dapper.SqlWriter
             }
         }
 
-        protected async Task<IEnumerable<C>> QueryAsync(QueryType queryType, string sql)
+        protected async Task<IEnumerable<C>> QueryAsync(QueryType queryType, string sql, string splitOn = "")
         {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
+
             Stopwatch stopwatch = StopWatchStart();
 
             IEnumerable<C> result;
 
             try
-            { 
-                await SqlWriter.SemaphoreSlim.WaitAsync();
+            {
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
 
-                result = await Connection.QueryAsync<C>(sql, P, QueryOptions.DbTransaction, QueryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await RegisteredClass.QueryAsync(sql, splitOn, P, connection, CommandTimeOut);
 
                 StopWatchEnd(stopwatch, sql);
-
-                Logger?.QueryExecuted(new QuerySuccess { Method = "QueryAsync", Results = result.Count(), Sql = sql, Stopwatch = stopwatch });
 
                 PrepareResults(queryType, result);
 
@@ -92,31 +86,33 @@ namespace Dapper.SqlWriter
 
                 var error = GetException(e);
 
-                Logger?.QueryExecuted(new QueryFailure { Method = "QueryAsync", Exception = error, Sql = sql, Stopwatch = stopwatch });
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(QueryAsync), e, sql, stopwatch));
 
                 throw error;
             }
             finally
             {
-                SqlWriter.SemaphoreSlim.Release();
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
             }
         }
 
         protected async Task<C> QueryFirstAsync(QueryType queryType, string sql)
         {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
+
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
-
+            
             try
             {
-                await SqlWriter.SemaphoreSlim.WaitAsync();
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
 
-                result = await Connection.QueryFirstAsync<C>(sql, P, QueryOptions.DbTransaction, QueryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await connection.QueryFirstAsync<C>(sql, P, null, CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
-
-                Logger?.QueryExecuted(new QuerySuccess { Method = "QueryFirstAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
 
                 PrepareResult(queryType, result);
 
@@ -128,31 +124,33 @@ namespace Dapper.SqlWriter
 
                 var error = GetException(e);
 
-                Logger?.QueryExecuted(new QueryFailure { Method = "QueryFirstAsync", Exception = error, Sql = sql, Stopwatch = stopwatch });
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(QueryFirstAsync), e, sql, stopwatch));
 
                 throw error;
             }
             finally
             {
-                SqlWriter.SemaphoreSlim.Release();
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
             }
         }
 
         protected async Task<C?> QueryFirstOrDefaultAsync(QueryType queryType, string sql)
         {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
+
             Stopwatch stopwatch = StopWatchStart();
 
             C? result;
 
             try
             {
-                await SqlWriter.SemaphoreSlim.WaitAsync();
-
-                result = await Connection.QueryFirstOrDefaultAsync<C>(sql, P, QueryOptions.DbTransaction, QueryOptions.CommandTimeOut).ConfigureAwait(false);
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
+                
+                result = await connection.QueryFirstOrDefaultAsync<C>(sql, P, null, CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
-
-                Logger?.QueryExecuted(new QuerySuccess { Method = "QueryFirstOrDefaultAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
 
                 PrepareResult(queryType, result);
 
@@ -164,31 +162,33 @@ namespace Dapper.SqlWriter
 
                 var error = GetException(e);
 
-                Logger?.QueryExecuted(new QueryFailure { Method = "QueryFirstOrDefaultAsync", Exception = error, Sql = sql, Stopwatch = stopwatch });
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(QueryFirstOrDefaultAsync), e, sql, stopwatch));
 
                 throw error;
             }
             finally
             {
-                SqlWriter.SemaphoreSlim.Release();
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
             }
         }
 
         protected async Task<C> QuerySingleAsync(QueryType queryType, string sql)
         {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
+
             Stopwatch stopwatch = StopWatchStart();
 
             C result;
 
             try
             {
-                await SqlWriter.SemaphoreSlim.WaitAsync();
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
 
-                result = await Connection.QuerySingleAsync<C>(sql, P, QueryOptions.DbTransaction, QueryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await connection.QuerySingleAsync<C>(sql, P, null, CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
-
-                Logger?.QueryExecuted(new QuerySuccess { Method = "QuerySingleAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
 
                 PrepareResult(queryType, result);
 
@@ -200,31 +200,33 @@ namespace Dapper.SqlWriter
 
                 var error = GetException(e);
 
-                Logger?.QueryExecuted(new QueryFailure { Method = "QuerySingleAsync", Exception = error, Sql = sql, Stopwatch = stopwatch });
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(QuerySingleAsync), e, sql, stopwatch));
 
                 throw error;
             }
             finally
             {
-                SqlWriter.SemaphoreSlim.Release();
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
             }
         }
 
         protected async Task<C?> QuerySingleOrDefaultAsync(QueryType queryType, string sql)
         {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
+
             Stopwatch stopwatch = StopWatchStart();
 
             C? result;
 
             try
             {
-                await SqlWriter.SemaphoreSlim.WaitAsync();
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
 
-                result = await Connection.QuerySingleOrDefaultAsync<C>(sql, P, QueryOptions.DbTransaction, QueryOptions.CommandTimeOut).ConfigureAwait(false);
+                result = await connection.QuerySingleOrDefaultAsync<C>(sql, P, null, CommandTimeOut).ConfigureAwait(false);
 
                 StopWatchEnd(stopwatch, sql);
-
-                Logger?.QueryExecuted(new QuerySuccess { Method = "QuerySingleOrDefaultAsync", Results = 1, Sql = sql, Stopwatch = stopwatch });
 
                 PrepareResult(queryType, result);
 
@@ -236,18 +238,50 @@ namespace Dapper.SqlWriter
 
                 var error = GetException(e);
 
-                Logger?.QueryExecuted(new QueryFailure { Method = "QuerySingleOrDefaultAsync", Exception = error, Sql = sql, Stopwatch = stopwatch });
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(QuerySingleOrDefaultAsync), e, sql, stopwatch));
 
                 throw error;
             }
             finally
             {
-                SqlWriter.SemaphoreSlim.Release();
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
             }
         }
 
+        protected async Task ExecuteAsync(string sql)
+        {
+            if (SqlWriter.Config.AllowConcurrentQueries == false)
+                await SqlWriter.SemaphoreSlim.WaitAsync();
 
+            Stopwatch stopwatch = StopWatchStart();
 
+            try
+            {
+                using IDbConnection connection = SqlWriter.Config.CreateDbConnection();
+
+                await connection.ExecuteAsync(sql, P, null, CommandTimeOut).ConfigureAwait(false);
+
+                StopWatchEnd(stopwatch, sql);
+            }
+            catch (Exception e)
+            {
+                StopWatchEnd(stopwatch, sql);
+
+                var error = GetException(e);
+
+                SqlWriter.OnQueryFailure(this, new QueryFailure(nameof(ExecuteAsync), e, sql, stopwatch));
+
+                throw error;
+            }
+            finally
+            {
+                if (SqlWriter.Config.AllowConcurrentQueries == false)
+                    SqlWriter.SemaphoreSlim.Release();
+            }
+        }
+
+        public int? CommandTimeOut { get; set; }
 
         private SqlWriterException GetException(Exception e) => new SqlWriterException("Error executing query.", e);
     }

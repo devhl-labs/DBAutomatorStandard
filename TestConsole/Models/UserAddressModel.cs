@@ -1,58 +1,40 @@
-﻿using Dapper.SqlWriter;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using Dapper;
+using Dapper.SqlWriter;
 
 namespace TestDatabaseLibrary
 {
-    [Table("UserAddress")] //view
-    public class UserAddressModel
+    public class User_WithAddresses : UserModel
     {
-        //UserModel
-        public ulong UserID { get; set; }
+        public List<AddressModel> Addresses { get; set; } = new List<AddressModel>();
 
-        [Column("UserNames")]
-        public string UserName { get; set; } = string.Empty;
+        public static async Task<IEnumerable<User_WithAddresses>> AddAddressesToList(string sql, string splitOn, DynamicParameters p, IDbConnection connection, int? connectionTimeOut)
+        {
+            using var _ = connection;
 
-        public NotMappedClass NotMappedClass { get; set; } = new NotMappedClass();
+            var userDictionary = new Dictionary<ulong, User_WithAddresses>();
 
-        [NotMapped]
-        public string NotMappedProperty { get; set; } = string.Empty;
+            var list = await connection.QueryAsync<User_WithAddresses, AddressModel, User_WithAddresses>(
+                map: (user, address) =>
+                {
+                    if (userDictionary.TryGetValue(user.UserID, out User_WithAddresses? userEntry) == false)
+                    {
+                        userEntry = user;
 
-        [NotMapped]
-        public bool IsNewRecord { get; set; } = true;
+                        userDictionary.Add(userEntry.UserID, userEntry);
+                    }
 
+                    if (address != null)
+                        userEntry.Addresses.Add(address);
 
+                    return userEntry;
+                },
+                sql: sql, splitOn: splitOn, param: p, commandTimeout: connectionTimeOut);
 
-
-
-
-
-        //AddressModel
-        public ulong AddressID { get; set; }
-
-        [Column("Address")]
-        public string UserAddress { get; set; } = string.Empty;
+            return userDictionary.Values;
+        }
     }
-
-
-
-
-
-
-
-/*
-BEGIN;
-
--- CREATE VIEW "UserAddress" -----------------------------------
-CREATE OR REPLACE VIEW "public"."UserAddress" AS  SELECT u."UserID",
-    u."UserNames",
-    a."AddressID",
-    a."Address"
-   FROM ("User" u
-     JOIN "Address" a ON ((u."UserID" = a."UserID")));;
--- -------------------------------------------------------------
-
-COMMIT;
-*/
-
-
-
 }
