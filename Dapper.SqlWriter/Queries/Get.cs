@@ -60,9 +60,9 @@ namespace Dapper.SqlWriter
             _columns = _columns[..^2];
 
             if (_splitOn == string.Empty)
-                _splitOn += registeredClass.RegisteredProperties.First().ColumnName;
+                _splitOn = registeredClass.RegisteredProperties.First(p => p.NotMapped == false).ColumnName;
             else
-                _splitOn += ", " + registeredClass.RegisteredProperties.First().ColumnName;
+                _splitOn += "," + registeredClass.RegisteredProperties.First(p => p.NotMapped == false).ColumnName;
 
             return this;
         }
@@ -449,7 +449,7 @@ namespace Dapper.SqlWriter
 
         public async Task<C?> QuerySingleOrDefaultAsync() => await QuerySingleOrDefaultAsync(QueryType.Select, ToString()).ConfigureAwait(false);
 
-        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Select, ToString()).ConfigureAwait(false)).ToList();
+        public async Task<List<C>> QueryToListAsync() => (await QueryAsync(QueryType.Select, ToString(), _splitOn).ConfigureAwait(false)).ToList();
 
         public async Task<List<T>> QueryToListAsync<T>() where T : class
         {
